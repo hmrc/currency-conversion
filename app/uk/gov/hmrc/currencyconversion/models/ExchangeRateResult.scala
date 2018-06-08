@@ -14,23 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.currencyconversion.services
+package uk.gov.hmrc.currencyconversion.models
 
-import java.time.LocalDate
+import play.api.libs.json.JsObject
 
-import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import uk.gov.hmrc.play.test.UnitSpec
-
-class ExchangeRateServiceSpec extends UnitSpec with GuiceOneAppPerSuite {
-
-  "invoking getRate" should {
-
-    //TODO: "and a list of valid currency codes
-    "return a rate given a date and currency code" in {
-
-      val exhcangeRateService = app.injector.instanceOf[ExchangeRateService]
-
-      exhcangeRateService.getRate(LocalDate.now(), "USD")
-    }
-  }
+sealed trait ExchangeRateResult {
+  def rate: JsObject
 }
+
+case class ExchangeRateSuccessResult(rate: JsObject) extends ExchangeRateResult
+case class ExchangeRateOldFileResult(rate: JsObject) extends ExchangeRateResult

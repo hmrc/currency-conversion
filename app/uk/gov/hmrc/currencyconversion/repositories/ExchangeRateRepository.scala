@@ -19,19 +19,18 @@ package uk.gov.hmrc.currencyconversion.repositories
 import java.io.InputStream
 import java.time.LocalDate
 
-import javax.inject.Inject
-import uk.gov.hmrc.currencyconversion.models.ConversionRatePeriod
-import uk.gov.hmrc.currencyconversion.services.ExchangeRateService
+import uk.gov.hmrc.currencyconversion.models.{ConversionRatePeriod, ExchangeRateOldFileResult, ExchangeRateResult, ExchangeRateSuccessResult}
+
 import uk.gov.hmrc.currencyconversion.utils.ExchangeRateParsing
 
 import scala.xml.{Elem, XML}
 
 class ExchangeRateRepository {
-
-  val files: Seq[ConversionRatePeriod] = loadXmlFiles.flatMap(ExchangeRateParsing.ratesFromXml)
+  
+  val files: Seq[ConversionRatePeriod] = loadXmlFiles.flatMap(ExchangeRateParsing.ratesFromXml).reverse
 
   def loadXmlFiles: Seq[Elem] = {
-    //TODO: Define here how many months worth of files we want to load
+
     def xmlStreams(month: Int = 2, year: Int = 18): Stream[InputStream] = {
       val nextMonth = if (month == 12) 1 else month + 1
       val nextYear = if (month == 12) year + 1 else year
@@ -46,14 +45,14 @@ class ExchangeRateRepository {
       }
     }
 
-    //TODO Add validation from utils parsing, log error if invalid, return all valid files
     xmlStreams().map(XML.load)
   }
+
   def getConversionRatePeriod(date: LocalDate): Option[ConversionRatePeriod] = {
-    files.find(crp => crp.startDate.isBefore(date) || crp.endDate.isAfter(date) || crp.startDate.isEqual(date) || crp.endDate.isEqual(date))
+    files.find(crp => (crp.startDate.isBefore(date) || crp.startDate.isEqual(date)) && (crp.endDate.isAfter(date) || crp.endDate.isEqual(date)))
   }
 
-  def getRecentConversionRatePeriod(date: LocalDate): Option[ConversionRatePeriod] = {
-    files.find(crp => crp.startDate.isBefore(date) && crp.endDate.isBefore(date.plusMonths(2)))
+  def getLatestCrp: ConversionRatePeriod = {
+    files.head
   }
 }

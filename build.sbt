@@ -21,7 +21,8 @@ lazy val microservice = Project(appName, file("."))
     unmanagedSourceDirectories in IntegrationTest := (baseDirectory in IntegrationTest) (base => Seq(base / "it")).value,
     testGrouping in IntegrationTest := oneForkedJvmPerTest((definedTests in IntegrationTest).value),
     parallelExecution in IntegrationTest := false,
-    addTestReportOption(IntegrationTest, "int-test-reports")
+    addTestReportOption(IntegrationTest, "int-test-reports"),
+    routesImport ++= Seq("uk.gov.hmrc.currencyconversion.binders.DateBinder._", "java.time._")
   )
   .settings(
     resolvers += Resolver.jcenterRepo

@@ -16,10 +16,16 @@
 
 package uk.gov.hmrc.currencyconversion.controllers
 
-import java.time.LocalDate
+import java.text.SimpleDateFormat
+import java.time.format.DateTimeFormatter
+import java.time.{LocalDate, LocalDateTime, ZonedDateTime}
+import java.util.{Date, Locale}
 
 import javax.inject.{Inject, Singleton}
+import play.api.Logger
+import play.api.libs.json.Json
 import play.api.mvc._
+import uk.gov.hmrc.currencyconversion.models.ExchangeRateOldFileResult
 import uk.gov.hmrc.currencyconversion.services.ExchangeRateService
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
@@ -28,17 +34,17 @@ import scala.concurrent.Future
 @Singleton()
 class ExchangeRateController @Inject()(exchangeRatesService: ExchangeRateService) extends BaseController {
 
-  //TODO: This now needs to accept a list of currencies and return the rates for each
-  def getRatesByCurrencyCode(cc: String): Action[AnyContent] = Action.async { implicit request =>
+  def getRatesByCurrencyCode(cc: List[String], date: LocalDate): Action[AnyContent] = Action.async { implicit request =>
 
-    val rate = exchangeRatesService.getRate(LocalDate.now(), cc)
+    val dateTime = ZonedDateTime.now().format(DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss z"))
 
-    val result = rate match {
-      case Some(r) => Ok(r)
-      case None => NotFound(s"No exchange rate found for $cc")
+    val exchangeRateResults = exchangeRatesService.getRates(date, cc)
+    val rates = exchangeRateResults.map(_.rate)
+
+    if (exchangeRateResults.exists(result => result.isInstanceOf[ExchangeRateOldFileResult])) {
+      Logger.error("Using older exchange rates file as file for supplied date could not be found...")
+      Future.successful(Ok(Json.toJson(rates)).withHeaders(WARNING -> s"""299 - "Date out of range" "${dateTime}""""))
     }
-
-
-    Future.successful(result)
+    else Future.successful(Ok(Json.toJson(rates)))
   }
 }

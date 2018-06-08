@@ -32,7 +32,7 @@ object ExchangeRateParsing {
     val periodAttr = (exchangeRatesRoot \ "@Period").text
 
     val groupedRates = (exchangeRatesRoot \ "_").map { exchangeRate =>
-        (exchangeRate \ "currencyCode").text -> (exchangeRate \ "rateNew").text
+        (exchangeRate \ "currencyCode").text -> Some((exchangeRate \ "rateNew").text)
     }.toMap
 
     def parseDates(dateRange: String): Option[(LocalDate, LocalDate)] = dateRange.split("to").map(_.trim) match {
@@ -43,7 +43,7 @@ object ExchangeRateParsing {
     val parsedDates = parseDates(periodAttr)
 
     parsedDates match {
-      case Some((s, e)) => Some(ConversionRatePeriod(s, e, groupedRates))
+      case Some((s, e)) => Some(ConversionRatePeriod(s, e, None, groupedRates))
       case None =>
         Logger.warn("Unable to parse dates from xml Element")
         None
