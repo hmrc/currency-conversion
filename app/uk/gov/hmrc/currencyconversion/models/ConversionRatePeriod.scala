@@ -14,21 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.currencyconversion.controllers
+package uk.gov.hmrc.currencyconversion.models
 
-import javax.inject.Singleton
+import java.time.LocalDate
 
-import uk.gov.hmrc.play.bootstrap.controller.BaseController
-import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
-import play.api.mvc._
+import play.api.libs.json._
+import play.api.libs.json.Json
 
-import scala.concurrent.Future
+case class ConversionRatePeriod(startDate: LocalDate, endDate: LocalDate, rates: Map[String, String])
 
-@Singleton()
-class MicroserviceHelloWorld extends BaseController {
-
-	def hello() = Action.async { implicit request =>
-		Future.successful(Ok("Hello world"))
-	}
-
-}
+)

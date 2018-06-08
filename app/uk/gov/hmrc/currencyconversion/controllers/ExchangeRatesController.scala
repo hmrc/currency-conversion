@@ -16,19 +16,30 @@
 
 package uk.gov.hmrc.currencyconversion.controllers
 
-import javax.inject.Singleton
+import java.time.LocalDate
 
+import javax.inject.Singleton
+import play.api.libs.json.{JsArray, Json}
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import play.api.mvc._
+import uk.gov.hmrc.currencyconversion.services.ExchangeRatesService
 
 import scala.concurrent.Future
 
 @Singleton()
-class MicroserviceHelloWorld extends BaseController {
+class ExchangeRatesController extends BaseController {
 
-	def hello() = Action.async { implicit request =>
-		Future.successful(Ok("Hello world"))
-	}
+  def getRatesByCurrencyCode(cc: String) = Action.async { implicit request =>
 
+    val rate = ExchangeRatesService.getRate(LocalDate.now(), cc)
+
+    val result = rate match {
+      case Some(r) => Ok(r)
+      case None => NotFound(s"No exchange rate found for $cc")
+    }
+
+
+    Future.successful(result)
+  }
 }
