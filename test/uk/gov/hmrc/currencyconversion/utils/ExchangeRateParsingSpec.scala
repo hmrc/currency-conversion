@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package services
+package uk.gov.hmrc.currencyconversion.utils
 
 import java.time.LocalDate
 
 import org.scalatest.{Matchers, WordSpec}
-import uk.gov.hmrc.currencyconversion.utils.Parsing
+import uk.gov.hmrc.currencyconversion.utils.ExchangeRateParsing
 
 
-class ParsingSpec extends WordSpec with Matchers {
+class ExchangeRateParsingSpec extends WordSpec with Matchers {
 
   "ratesFromXml" should {
 
@@ -46,7 +46,7 @@ class ParsingSpec extends WordSpec with Matchers {
           </exchangeRate>
         </exchangeRateMonthList>
 
-      val optionOfSample = Parsing.ratesFromXml(xml)
+      val optionOfSample = ExchangeRateParsing.ratesFromXml(xml)
 
       val resultOfSample = optionOfSample match {
         case Some(x) => x
@@ -89,7 +89,7 @@ class ParsingSpec extends WordSpec with Matchers {
           </exchangeRate>
         </exchangeRateMonthList>
 
-      Parsing.isValidXmlElem(xml) shouldBe true
+      ExchangeRateParsing.isValidXmlElem(xml) shouldBe true
     }
 
     "validate the period attribute of an xml element" in {
@@ -104,7 +104,7 @@ class ParsingSpec extends WordSpec with Matchers {
           </exchangeRate>
         </exchangeRateMonthList>
 
-      Parsing.isValidXmlElem(invalidPeriodXml) shouldBe false
+      ExchangeRateParsing.isValidXmlElem(invalidPeriodXml) shouldBe false
     }
 
     "validate the existence of essential child elements" in {
@@ -143,8 +143,8 @@ class ParsingSpec extends WordSpec with Matchers {
           </exchangeRate>
         </exchangeRateMonthList>
 
-      Parsing.isValidXmlElem(xmlMissingCurrencyCode) shouldBe false
-      Parsing.isValidXmlElem(xmlMissingRateNew) shouldBe false
+      ExchangeRateParsing.isValidXmlElem(xmlMissingCurrencyCode) shouldBe false
+      ExchangeRateParsing.isValidXmlElem(xmlMissingRateNew) shouldBe false
     }
 
     "validate essential elements have content" in {
@@ -185,8 +185,8 @@ class ParsingSpec extends WordSpec with Matchers {
           </exchangeRate>
         </exchangeRateMonthList>
 
-      Parsing.isValidXmlElem(xmlEmptyRateNew) shouldBe false
-      Parsing.isValidXmlElem(xmlEmptyCurrencyCode) shouldBe false
+      ExchangeRateParsing.isValidXmlElem(xmlEmptyRateNew) shouldBe false
+      ExchangeRateParsing.isValidXmlElem(xmlEmptyCurrencyCode) shouldBe false
     }
   }
 }

@@ -18,9 +18,4 @@ package uk.gov.hmrc.currencyconversion.models
 
 import java.time.LocalDate
 
-import play.api.libs.json._
-import play.api.libs.json.Json
-
 case class ConversionRatePeriod(startDate: LocalDate, endDate: LocalDate, rates: Map[String, String])
-
-)

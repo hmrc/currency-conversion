@@ -24,24 +24,20 @@ import uk.gov.hmrc.currencyconversion.models.ConversionRatePeriod
 
 import scala.xml.Elem
 
-object Parsing {
+object ExchangeRateParsing {
 
   private val formatter = DateTimeFormatter.ofPattern("dd/MMM/yyyy")
 
   def ratesFromXml(exchangeRatesRoot: Elem): Option[ConversionRatePeriod] = {
     val periodAttr = (exchangeRatesRoot \ "@Period").text
 
-    val groupedRates = {
-      (exchangeRatesRoot \ "_").map { exchangeRate =>
+    val groupedRates = (exchangeRatesRoot \ "_").map { exchangeRate =>
         (exchangeRate \ "currencyCode").text -> (exchangeRate \ "rateNew").text
-      }
     }.toMap
 
-    def parseDates(dateRange: String): Option[(LocalDate, LocalDate)] = {
-      dateRange.split("to").map(_.trim) match {
+    def parseDates(dateRange: String): Option[(LocalDate, LocalDate)] = dateRange.split("to").map(_.trim) match {
         case Array(start, end) => Some((LocalDate.parse(start, formatter), LocalDate.parse(end, formatter)))
         case _ => None
-      }
     }
 
     val parsedDates = parseDates(periodAttr)
@@ -62,6 +58,7 @@ object Parsing {
     }
 
     val validateEssentialElems = {
+      // get all the nodes and node labels that actually have values
       val exchangeRateNodes = elem.child.toList.filterNot(_.isAtom)
       val exchangeRateLabels = exchangeRateNodes.map(exchangeRate => exchangeRate.child.filterNot(_.isAtom).map(childNode => childNode.label).toList)
 

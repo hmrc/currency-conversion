@@ -14,27 +14,23 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.currencyconversion.controllers
+package uk.gov.hmrc.currencyconversion.services
 
-import play.api.http.Status
-import play.api.test.FakeRequest
-import play.api.http.Status
-import play.api.test.FakeRequest
+import java.time.LocalDate
+
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import uk.gov.hmrc.play.test.UnitSpec
-import uk.gov.hmrc.play.test.WithFakeApplication
-import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 
+class ExchangeRateServiceSpec extends UnitSpec with GuiceOneAppPerSuite {
 
-class ExchangeRatesControllerSpec extends UnitSpec with WithFakeApplication{
+  "invoking getRate" should {
 
-  val fakeRequest = FakeRequest("GET", "/rates")
+    //TODO: "and a list of valid currency codes
+    "return a rate given a date and currency code" in {
 
-  "GET /rates" should {
-    "return 200" in {
-//      val controller = new ExchangeRatesController()
-//      val result = controller.getAllRates()(fakeRequest)
-//      status(result) shouldBe Status.OK
+      val exhcangeRateService = app.injector.instanceOf[ExchangeRateService]
+
+      exhcangeRateService.getRate(LocalDate.now(), "USD")
     }
   }
-
 }

@@ -1,4 +1,3 @@
 # microservice specific routes
 
-GET        /hello-world             uk.gov.hmrc.currencyconversion.controllers.MicroserviceHelloWorld.hello
-GET        /rates/:cc               uk.gov.hmrc.currencyconversion.controllers.ExchangeRatesController.getRatesByCurrencyCode(cc: String)
+GET        /rates/:cc               uk.gov.hmrc.currencyconversion.controllers.ExchangeRateController.getRatesByCurrencyCode(cc: String)

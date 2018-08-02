@@ -14,7 +14,8 @@ object AppDependencies {
     "uk.gov.hmrc" %% "hmrctest" % "3.0.0" % scope,
     "org.scalatest" %% "scalatest" % "3.0.4" % scope,
     "org.pegdown" % "pegdown" % "1.6.0" % scope,
-
+    "org.mockito" % "mockito-all" % "2.0.2-beta" % "test",
+    "org.scalatestplus.play" %% "scalatestplus-play" % "2.0.1" % "test,it",
     "com.typesafe.play" %% "play-test" % PlayVersion.current % scope
   )
 
