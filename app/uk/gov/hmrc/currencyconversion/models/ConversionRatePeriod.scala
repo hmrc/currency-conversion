@@ -18,4 +18,4 @@ package uk.gov.hmrc.currencyconversion.models
 
 import java.time.LocalDate
 
-case class ConversionRatePeriod(startDate: LocalDate, endDate: LocalDate, rates: Map[String, String])
+case class ConversionRatePeriod(startDate: LocalDate, endDate: LocalDate, currencyCode: Option[String], rates: Map[String, Option[String]])

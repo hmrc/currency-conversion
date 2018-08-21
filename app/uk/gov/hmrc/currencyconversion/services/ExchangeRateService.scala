@@ -16,25 +16,35 @@
 
 package uk.gov.hmrc.currencyconversion.services
 
-import java.io.InputStream
 import java.time.LocalDate
 
 import javax.inject.Inject
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json._
+import uk.gov.hmrc.currencyconversion.models._
 import uk.gov.hmrc.currencyconversion.repositories.ExchangeRateRepository
 
-import scala.xml.{Elem, XML}
+class ExchangeRateService @Inject()(exchangeRateRepository: ExchangeRateRepository)  {
 
 
-class ExchangeRateService @Inject() (exchangeRateRepository: ExchangeRateRepository) {
+  def getRates(date: LocalDate, currencyCodes: List[String]): List[ExchangeRateResult] = {
 
+    val conversionRatePeriod = exchangeRateRepository.getConversionRatePeriod(date)
 
-  def getRate(date: LocalDate, currencyCode: String): Option[JsObject] = {
+    currencyCodes.map { currencyCode =>
+      conversionRatePeriod match {
+        case Some(crp) =>
+          crp.rates.get(currencyCode) match {
+            case Some(rate) => ExchangeRateSuccessResult(Json.obj("startDate" -> crp.startDate, "endDate" -> crp.endDate, "currencyCode" -> currencyCode, "rate" -> rate))
+            case None => ExchangeRateSuccessResult(Json.obj("startDate" -> crp.startDate, "endDate" -> crp.endDate, "currencyCode" -> currencyCode))
+          }
+        case None =>
+          val fallbackCrp = exchangeRateRepository.getLatestCrp
 
-    for {
-      crp <- exchangeRateRepository.getRecentConversionRatePeriod(date)
-      rate <- crp.rates.get(currencyCode)
-      // TODO: we may no longer need the start and end date
-    } yield Json.obj("startDate" -> crp.startDate, "endDate" -> crp.endDate, "rate" -> rate)
+          fallbackCrp.rates.get(currencyCode) match {
+            case Some(rate) => ExchangeRateOldFileResult(Json.obj("startDate" -> fallbackCrp.startDate, "endDate" -> fallbackCrp.endDate, "currencyCode" -> currencyCode, "rate" -> rate))
+            case None => ExchangeRateOldFileResult(Json.obj("startDate" -> fallbackCrp.startDate, "endDate" -> fallbackCrp.endDate, "currencyCode" -> currencyCode))
+          }
+      }
+    }
   }
 }

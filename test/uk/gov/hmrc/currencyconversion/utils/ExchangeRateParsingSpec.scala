@@ -19,8 +19,6 @@ package uk.gov.hmrc.currencyconversion.utils
 import java.time.LocalDate
 
 import org.scalatest.{Matchers, WordSpec}
-import uk.gov.hmrc.currencyconversion.utils.ExchangeRateParsing
-
 
 class ExchangeRateParsingSpec extends WordSpec with Matchers {
 
@@ -55,7 +53,7 @@ class ExchangeRateParsingSpec extends WordSpec with Matchers {
 
       resultOfSample.startDate shouldBe LocalDate.parse("2018-05-01")
       resultOfSample.endDate shouldBe LocalDate.parse("2018-05-31")
-      resultOfSample.rates shouldBe Map("ARS" -> "28.67", "AUD" -> "1.782")
+      resultOfSample.rates shouldBe Map("ARS" -> Some("28.67"), "AUD" -> Some("1.782"))
 
     }
   }
