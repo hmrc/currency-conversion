@@ -16,10 +16,8 @@
 
 package uk.gov.hmrc.currencyconversion.controllers
 
-import java.text.SimpleDateFormat
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, LocalDateTime, ZonedDateTime}
-import java.util.{Date, Locale}
+import java.time.{LocalDate, ZonedDateTime}
 
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
@@ -27,12 +25,15 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.currencyconversion.models.ExchangeRateOldFileResult
 import uk.gov.hmrc.currencyconversion.services.ExchangeRateService
-import uk.gov.hmrc.play.bootstrap.controller.BaseController
+import uk.gov.hmrc.play.bootstrap.controller.BackendController
 
 import scala.concurrent.Future
 
 @Singleton()
-class ExchangeRateController @Inject()(exchangeRatesService: ExchangeRateService) extends BaseController {
+class ExchangeRateController @Inject() (
+  exchangeRatesService: ExchangeRateService,
+  controllerComponents: ControllerComponents
+) extends BackendController(controllerComponents) {
 
   def getRatesByCurrencyCode(cc: List[String], date: LocalDate): Action[AnyContent] = Action.async { implicit request =>
 
