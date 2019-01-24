@@ -32,7 +32,9 @@ object ExchangeRateParsing {
     val periodAttr = (exchangeRatesRoot \ "@Period").text
 
     val groupedRates = (exchangeRatesRoot \ "_").map { exchangeRate =>
-        (exchangeRate \ "currencyCode").text -> Some((exchangeRate \ "rateNew").text)
+      val rateNew = BigDecimal((exchangeRate \ "rateNew").text)
+      val rateNewFormatted = if (rateNew.scale < 2) rateNew.setScale(2) else rateNew
+      (exchangeRate \ "currencyCode").text -> Some(rateNewFormatted)
     }.toMap
 
     def parseDates(dateRange: String): Option[(LocalDate, LocalDate)] = dateRange.split("to").map(_.trim) match {
