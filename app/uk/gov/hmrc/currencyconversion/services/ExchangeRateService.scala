@@ -34,14 +34,13 @@ class ExchangeRateService @Inject()(exchangeRateRepository: ExchangeRateReposito
       conversionRatePeriod match {
         case Some(crp) =>
           crp.rates.get(currencyCode) match {
-            case Some(rate) => ExchangeRateSuccessResult(Json.obj("startDate" -> crp.startDate, "endDate" -> crp.endDate, "currencyCode" -> currencyCode, "rate" -> rate))
+            case Some(rate) => ExchangeRateSuccessResult(Json.obj("startDate" -> crp.startDate, "endDate" -> crp.endDate, "currencyCode" -> currencyCode, "rate" -> rate.map(_.toString())))
             case None => ExchangeRateSuccessResult(Json.obj("startDate" -> crp.startDate, "endDate" -> crp.endDate, "currencyCode" -> currencyCode))
           }
         case None =>
           val fallbackCrp = exchangeRateRepository.getLatestCrp
-
           fallbackCrp.rates.get(currencyCode) match {
-            case Some(rate) => ExchangeRateOldFileResult(Json.obj("startDate" -> fallbackCrp.startDate, "endDate" -> fallbackCrp.endDate, "currencyCode" -> currencyCode, "rate" -> rate))
+            case Some(rate) => ExchangeRateOldFileResult(Json.obj("startDate" -> fallbackCrp.startDate, "endDate" -> fallbackCrp.endDate, "currencyCode" -> currencyCode, "rate" -> rate.map(_.toString())))
             case None => ExchangeRateOldFileResult(Json.obj("startDate" -> fallbackCrp.startDate, "endDate" -> fallbackCrp.endDate, "currencyCode" -> currencyCode))
           }
       }

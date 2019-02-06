@@ -53,8 +53,40 @@ class ExchangeRateParsingSpec extends WordSpec with Matchers {
 
       resultOfSample.startDate shouldBe LocalDate.parse("2018-05-01")
       resultOfSample.endDate shouldBe LocalDate.parse("2018-05-31")
-      resultOfSample.rates shouldBe Map("ARS" -> Some("28.67"), "AUD" -> Some("1.782"))
+      resultOfSample.rates shouldBe Map("ARS" -> Some(28.67), "AUD" -> Some(1.782))
+    }
 
+
+    "enforce a minimum of two decimal places" in {
+
+      val xml =
+        <exchangeRateMonthList Period="01/May/2018 to 31/May/2018">
+          <exchangeRate>
+            <countryName>Argentina</countryName>
+            <countryCode>AR</countryCode>
+            <currencyName>Peso </currencyName>
+            <currencyCode>ARS</currencyCode>
+            <rateNew>28</rateNew>
+          </exchangeRate>
+          <exchangeRate>
+            <countryName>Australia</countryName>
+            <countryCode>AU</countryCode>
+            <currencyName>Dollar </currencyName>
+            <currencyCode>AUD</currencyCode>
+            <rateNew>1.7</rateNew>
+          </exchangeRate>
+        </exchangeRateMonthList>
+
+      val optionOfSample = ExchangeRateParsing.ratesFromXml(xml)
+
+      val resultOfSample = optionOfSample match {
+        case Some(x) => x
+        case None => fail("Result returned as None")
+      }
+
+      resultOfSample.startDate shouldBe LocalDate.parse("2018-05-01")
+      resultOfSample.endDate shouldBe LocalDate.parse("2018-05-31")
+      resultOfSample.rates shouldBe Map("ARS" -> Some(28.00), "AUD" -> Some(1.70))
     }
   }
 

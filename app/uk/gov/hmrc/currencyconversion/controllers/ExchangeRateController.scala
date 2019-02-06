@@ -44,8 +44,10 @@ class ExchangeRateController @Inject() (
 
     if (exchangeRateResults.exists(result => result.isInstanceOf[ExchangeRateOldFileResult])) {
       Logger.error("Using older exchange rates file as file for supplied date could not be found...")
-      Future.successful(Ok(Json.toJson(rates)).withHeaders(WARNING -> s"""299 - "Date out of range" "${dateTime}""""))
+      Future.successful(Ok(Json.toJson(rates)).withHeaders(WARNING -> s"""299 - "Date out of range" "$dateTime""""))
     }
-    else Future.successful(Ok(Json.toJson(rates)))
+    else {
+      Future.successful(Ok(Json.toJson(rates)))
+    }
   }
 }
