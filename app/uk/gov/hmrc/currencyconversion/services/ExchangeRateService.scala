@@ -21,9 +21,9 @@ import java.time.LocalDate
 import javax.inject.Inject
 import play.api.libs.json._
 import uk.gov.hmrc.currencyconversion.models._
-import uk.gov.hmrc.currencyconversion.repositories.ExchangeRateRepository
+import uk.gov.hmrc.currencyconversion.repositories.ConversionRatePeriodRepository
 
-class ExchangeRateService @Inject()(exchangeRateRepository: ExchangeRateRepository)  {
+class ExchangeRateService @Inject()(exchangeRateRepository: ConversionRatePeriodRepository)  {
 
 
   def getRates(date: LocalDate, currencyCodes: List[String]): List[ExchangeRateResult] = {
@@ -38,7 +38,7 @@ class ExchangeRateService @Inject()(exchangeRateRepository: ExchangeRateReposito
             case None => ExchangeRateSuccessResult(Json.obj("startDate" -> crp.startDate, "endDate" -> crp.endDate, "currencyCode" -> currencyCode))
           }
         case None =>
-          val fallbackCrp = exchangeRateRepository.getLatestCrp
+          val fallbackCrp = exchangeRateRepository.getLatestConversionRatePeriod
           fallbackCrp.rates.get(currencyCode) match {
             case Some(rate) => ExchangeRateOldFileResult(Json.obj("startDate" -> fallbackCrp.startDate, "endDate" -> fallbackCrp.endDate, "currencyCode" -> currencyCode, "rate" -> rate.map(_.toString())))
             case None => ExchangeRateOldFileResult(Json.obj("startDate" -> fallbackCrp.startDate, "endDate" -> fallbackCrp.endDate, "currencyCode" -> currencyCode))
