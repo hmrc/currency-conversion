@@ -19,28 +19,37 @@ package uk.gov.hmrc.currencyconversion.controllers
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
+import org.mockito.Mockito
+import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.http.Status
+import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsArray, JsObject, Json}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.play.test.UnitSpec
+import play.api.inject.bind
+import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 
 class ExchangeRateControllerSpec extends UnitSpec with GuiceOneAppPerSuite {
+
+  override lazy val app = new GuiceApplicationBuilder().overrides(
+    bind[AuditConnector].toInstance(MockitoSugar.mock[AuditConnector])
+  ).build()
 
 
   "Getting rates for a valid date and 1 valid currency" should {
 
     "return 200 and the correct json" in {
 
-      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2018-03-10?cc=USD")).get
+      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-10?cc=USD")).get
 
       status(result) shouldBe Status.OK
 
       result.header.headers.get("Warning") shouldBe None
 
       contentAsJson(result) shouldBe Json.arr(
-        Json.obj("startDate" -> "2018-03-01", "endDate" -> "2018-03-31", "currencyCode" -> "USD", "rate" -> "1.3979")
+        Json.obj("startDate" -> "2019-09-01", "endDate" -> "2019-09-30", "currencyCode" -> "USD", "rate" -> "1.213")
       )
     }
   }
@@ -49,14 +58,15 @@ class ExchangeRateControllerSpec extends UnitSpec with GuiceOneAppPerSuite {
 
     "return 200 and the correct json" in {
 
-      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2018-03-10?cc=INVALID")).get
+      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-10?cc=INVALID")).get
+
 
       status(result) shouldBe Status.OK
 
       result.header.headers.get("Warning") shouldBe None
 
       contentAsJson(result) shouldBe Json.arr(
-        Json.obj("startDate" -> "2018-03-01", "endDate" -> "2018-03-31", "currencyCode" -> "INVALID")
+        Json.obj("startDate" -> "2019-09-01", "endDate" -> "2019-09-30", "currencyCode" -> "INVALID")
       )
     }
   }
@@ -65,21 +75,19 @@ class ExchangeRateControllerSpec extends UnitSpec with GuiceOneAppPerSuite {
 
     "return 200 and the correct json" in {
 
-      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2018-03-10?cc=USD&cc=INVALID")).get
+      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-10?cc=USD&cc=INVALID")).get
 
       status(result) shouldBe Status.OK
 
       result.header.headers.get("Warning") shouldBe None
 
-      contentAsJson(result) shouldBe Json.arr(
-        Json.obj("startDate" -> "2018-03-01", "endDate" -> "2018-03-31", "currencyCode" -> "USD", "rate" -> "1.3979"),
-        Json.obj("startDate" -> "2018-03-01", "endDate" -> "2018-03-31", "currencyCode" -> "INVALID")
-      )
+      contentAsJson(result).as[JsArray].value(0).as[JsObject].keys shouldBe Set("startDate", "endDate", "currencyCode", "rate")
+      contentAsJson(result).as[JsArray].value(1).as[JsObject].keys shouldBe Set("startDate", "endDate", "currencyCode")
 
     }
   }
 
-  "Getting rates for a date which has no rateş xml file and a valid currency code" should {
+  "Getting rates for a date which has no rates xml file and a valid currency code" should {
 
     "return 200 and the correct json" in {
 
@@ -91,7 +99,7 @@ class ExchangeRateControllerSpec extends UnitSpec with GuiceOneAppPerSuite {
     }
   }
 
-  "Getting rates for a date which has no rateş xml file, 1 valid currency code and 1 invalid currency code" should {
+  "Getting rates for a date which has no rates xml file, 1 valid currency code and 1 invalid currency code" should {
 
     "return 200 and the correct json" in {
 
@@ -114,12 +122,12 @@ class ExchangeRateControllerSpec extends UnitSpec with GuiceOneAppPerSuite {
 
     "return 200 and the correct json which gets rate from file of the same month" in {
 
-      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2018-05-31?cc=USD")).get
+      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-30?cc=USD")).get
 
       status(result) shouldBe Status.OK
 
       contentAsJson(result) shouldBe Json.arr(
-        Json.obj("startDate" -> "2018-05-01", "endDate" -> "2018-05-31", "currencyCode" -> "USD", "rate" -> "1.4234")
+        Json.obj("startDate" -> "2019-09-01", "endDate" -> "2019-09-30", "currencyCode" -> "USD", "rate" -> "1.213")
       )
     }
   }
@@ -128,12 +136,12 @@ class ExchangeRateControllerSpec extends UnitSpec with GuiceOneAppPerSuite {
 
     "return 200 and the correct json which gets rate from file of the same month" in {
 
-      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2018-06-01?cc=USD")).get
+      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-01?cc=USD")).get
 
       status(result) shouldBe Status.OK
 
       contentAsJson(result) shouldBe Json.arr(
-        Json.obj("startDate" -> "2018-06-01", "endDate" -> "2018-06-30", "currencyCode" -> "USD", "rate" -> "1.3342")
+        Json.obj("startDate" -> "2019-09-01", "endDate" -> "2019-09-30", "currencyCode" -> "USD", "rate" -> "1.213")
       )
     }
   }
@@ -146,7 +154,7 @@ class ExchangeRateControllerSpec extends UnitSpec with GuiceOneAppPerSuite {
 
       status(result) shouldBe Status.BAD_REQUEST
 
-      contentAsJson(result) shouldBe Json.obj("statusCode" -> 400,"message" -> "bad request")
+      contentAsJson(result) shouldBe Json.obj("statusCode" -> 400, "message" -> "bad request")
 
     }
   }

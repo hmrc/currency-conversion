@@ -25,13 +25,11 @@ import uk.gov.hmrc.currencyconversion.utils.ExchangeRateParsing
 
 import scala.xml.{Elem, XML}
 
-class ExchangeRateRepository {
+class ConversionRatePeriodRepository {
   
-  val files: Seq[ConversionRatePeriod] = loadXmlFiles.flatMap(ExchangeRateParsing.ratesFromXml).reverse
+  lazy val conversionRatePeriods: Seq[ConversionRatePeriod] = {
 
-  def loadXmlFiles: Seq[Elem] = {
-
-    def xmlStreams(month: Int = 2, year: Int = 18): Stream[InputStream] = {
+    def xmlStreams(month: Int = 9, year: Int = 19): Stream[InputStream] = {
       val nextMonth = if (month == 12) 1 else month + 1
       val nextYear = if (month == 12) year + 1 else year
 
@@ -45,14 +43,14 @@ class ExchangeRateRepository {
       }
     }
 
-    xmlStreams().map(XML.load)
+    xmlStreams().map(XML.load).flatMap(ExchangeRateParsing.ratesFromXml).reverse
+
   }
 
-  def getConversionRatePeriod(date: LocalDate): Option[ConversionRatePeriod] = {
-    files.find(crp => (crp.startDate.isBefore(date) || crp.startDate.isEqual(date)) && (crp.endDate.isAfter(date) || crp.endDate.isEqual(date)))
-  }
+  def getConversionRatePeriod(date: LocalDate): Option[ConversionRatePeriod] =
+    conversionRatePeriods.find(crp => (crp.startDate.isBefore(date) || crp.startDate.isEqual(date)) && (crp.endDate.isAfter(date) || crp.endDate.isEqual(date)))
 
-  def getLatestCrp: ConversionRatePeriod = {
-    files.head
-  }
+  def getLatestConversionRatePeriod: ConversionRatePeriod =
+    conversionRatePeriods.head
+
 }
