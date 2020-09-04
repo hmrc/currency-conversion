@@ -14,6 +14,7 @@ lazy val microservice = Project(appName, file("."))
   .settings(
     publishingSettings: _*
   )
+  .settings(scalaVersion := "2.12.12")
   .configs(IntegrationTest)
   .settings(inConfig(IntegrationTest)(Defaults.itSettings): _*)
   .settings(
