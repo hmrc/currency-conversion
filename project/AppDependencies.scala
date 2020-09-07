@@ -15,7 +15,7 @@ object AppDependencies {
     "org.scalatest" %% "scalatest" % "3.0.8" % scope,
     "org.pegdown" % "pegdown" % "1.6.0" % scope,
     "org.mockito" % "mockito-all" % "2.0.2-beta" % "test",
-    "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % "test,it",
+    "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.3" % "test,it",
     "com.typesafe.play" %% "play-test" % PlayVersion.current % scope
   )
 
