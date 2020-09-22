@@ -50,4 +50,11 @@ class ExchangeRateController @Inject() (
       Future.successful(Ok(Json.toJson(rates)))
     }
   }
+
+  def getCurrenciesByDate(date: LocalDate): Action[AnyContent] = Action.async { implicit request =>
+    exchangeRatesService.getCurrencies(date) match {
+      case Some(cp) => Future.successful(Ok(Json.toJson(cp)))
+      case None => Future.successful(NotFound)
+    }
+  }
 }

@@ -46,4 +46,7 @@ class ExchangeRateService @Inject()(exchangeRateRepository: ConversionRatePeriod
       }
     }
   }
+
+  def getCurrencies(date: LocalDate): Option[CurrencyPeriod] =
+    exchangeRateRepository.getCurrencyPeriod(date)
 }

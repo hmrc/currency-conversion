@@ -14,25 +14,20 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.currencyconversion.repositories
+package uk.gov.hmrc.currencyconversion.models
 
-import java.io.File
+import java.time.LocalDate
 
-import org.scalatest.Inspectors._
-import org.scalatest.{Matchers, WordSpec}
+import play.api.libs.json.{Json, OFormat}
 
-class ExchangeRateRepositorySpec extends WordSpec with Matchers {
+case class Currency(countryName: String, currencyName: String, currencyCode: String)
 
-    "the rates files stored in memory" should {
-
-      "all have the correct format file name" in {
-
-        val fileNames = new File(getClass.getResource("/resources/xml/").toURI).list().toList
-
-        forAll(fileNames) { fileName =>
-          fileName should fullyMatch regex """exrates-monthly-\d{4}.xml"""
-        }
-      }
-  }
+object Currency {
+  implicit val format: OFormat[Currency] = Json.format[Currency]
 }
 
+case class CurrencyPeriod(start: LocalDate, end: LocalDate, currencies: Seq[Currency])
+
+object CurrencyPeriod {
+  implicit val format: OFormat[CurrencyPeriod] = Json.format[CurrencyPeriod]
+}
