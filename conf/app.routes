@@ -1,3 +1,4 @@
 # microservice specific routes
 
 GET        /rates/:date               uk.gov.hmrc.currencyconversion.controllers.ExchangeRateController.getRatesByCurrencyCode(cc: List[String], date: LocalDate)
+GET        /currencies/:date          uk.gov.hmrc.currencyconversion.controllers.ExchangeRateController.getCurrenciesByDate(date: LocalDate)
