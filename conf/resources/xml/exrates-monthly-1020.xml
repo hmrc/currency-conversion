@@ -932,7 +932,7 @@
     <rateNew>1231.63</rateNew>
   </exchangeRate>
   <exchangeRate>
-    <countryName>Saotome & Principe</countryName>
+    <countryName>Saotome &amp; Principe</countryName>
     <countryCode>ST</countryCode>
     <currencyName>Dobra </currencyName>
     <currencyCode>STD</currencyCode>
@@ -988,7 +988,7 @@
     <rateNew>236.05</rateNew>
   </exchangeRate>
   <exchangeRate>
-    <countryName>St Christopher & Anguilla</countryName>
+    <countryName>St Christopher &amp; Anguilla</countryName>
     <countryCode>KN</countryCode>
     <currencyName>E Caribbean Dollar </currencyName>
     <currencyCode>XCD</currencyCode>
@@ -1135,7 +1135,7 @@
     <rateNew>29588.68</rateNew>
   </exchangeRate>
   <exchangeRate>
-    <countryName>Wallis & Futuna Islands</countryName>
+    <countryName>Wallis &amp; Futuna Islands</countryName>
     <countryCode>WF</countryCode>
     <currencyName>CFP Franc </currencyName>
     <currencyCode>XPF</currencyCode>
