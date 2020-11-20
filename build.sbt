@@ -1,5 +1,6 @@
 import TestPhases.oneForkedJvmPerTest
-import uk.gov.hmrc.DefaultBuildSettings.{addTestReportOption}
+import scoverage.ScoverageKeys
+import uk.gov.hmrc.DefaultBuildSettings.addTestReportOption
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin.publishingSettings
 
 val appName = "currency-conversion"
@@ -28,4 +29,8 @@ lazy val microservice = Project(appName, file("."))
   .settings(majorVersion := 1)
   .settings(
     resolvers += Resolver.jcenterRepo
+  )
+  .settings(
+    ScoverageKeys.coverageExcludedFiles := "<empty>;Reverse.*;.*Routes.*;",
+    ScoverageKeys.coverageMinimum := 80
   )
