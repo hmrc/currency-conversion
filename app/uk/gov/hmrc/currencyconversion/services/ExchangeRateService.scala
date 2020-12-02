@@ -17,6 +17,7 @@
 package uk.gov.hmrc.currencyconversion.services
 
 import java.time.LocalDate
+import java.time.temporal.TemporalAdjusters.lastDayOfMonth
 
 import javax.inject.Inject
 import play.api.libs.json._
@@ -47,6 +48,13 @@ class ExchangeRateService @Inject()(exchangeRateRepository: ConversionRatePeriod
     }
   }
 
-  def getCurrencies(date: LocalDate): Option[CurrencyPeriod] =
-    exchangeRateRepository.getCurrencyPeriod(date)
+  def getCurrencies(date: LocalDate): Option[CurrencyPeriod] = {
+
+    def fallbackPeriod() = {
+      val fallbackDate = date.minusMonths(1).`with`(lastDayOfMonth()) //lastDay of previous month
+      exchangeRateRepository.getCurrencyPeriod(fallbackDate)
+    }
+
+    exchangeRateRepository.getCurrencyPeriod(date).orElse(fallbackPeriod())
+  }
 }

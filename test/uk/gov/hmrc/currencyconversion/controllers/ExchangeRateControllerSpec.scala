@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.currencyconversion.controllers
 
+import java.time.LocalDate
+
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.http.Status
@@ -179,9 +181,20 @@ class ExchangeRateControllerSpec extends UnitSpec with GuiceOneAppPerSuite {
 
   "Getting currencies for a date which does not exist" should {
 
-    "return 404" in {
+    "return 200 if fallback is available" in {
 
-      val result = route(app, FakeRequest("GET", "/currency-conversion/currencies/2019-01-01")).get
+      val date = LocalDate.now().plusMonths(1).withDayOfMonth(1).toString
+
+      val result = route(app, FakeRequest("GET", s"/currency-conversion/currencies/$date")).get
+
+      status(result) shouldBe Status.OK
+
+      contentAsJson(result).as[JsObject].keys shouldBe Set("start", "end", "currencies")
+    }
+
+    "return 404 if fallback also fails" in {
+
+      val result = route(app, FakeRequest("GET", "/currency-conversion/currencies/2018-01-01")).get
 
       status(result) shouldBe Status.NOT_FOUND
     }
