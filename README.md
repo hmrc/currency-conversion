@@ -1,6 +1,6 @@
 # currency-conversion
 
-This service is used to retrieve one or more exchange rates for countries from the approved [HMRC monthly exchange rates](https://www.gov.uk/government/publications/hmrc-exchange-rates-for-2019-monthly "HMRC Monthly Exchange Rates")
+This service is used to retrieve one or more exchange rates for countries from the approved [HMRC monthly exchange rates](https://www.gov.uk/government/publications/hmrc-exchange-rates-for-2021-monthly "HMRC Monthly Exchange Rates")
 
 ## Flow
 
@@ -33,4 +33,4 @@ NB: If an exchange rate file cannot be found, an error will be logged and a `WAR
 
 ## Exchange Rates Data
 
-Exchange rates data currently resides in the `/conf/resources/xml` directory. This service currently only supports [the exchange rate file data](https://www.gov.uk/government/publications/hmrc-exchange-rates-for-2019-monthly) in the [xml format](http://www.hmrc.gov.uk/softwaredevelopers/2019-exrates.html) 
+Exchange rates data currently resides in the `/conf/resources/xml` directory. This service currently only supports [the exchange rate file data](https://www.gov.uk/government/publications/hmrc-exchange-rates-for-2021-monthly) in the [xml format](http://www.hmrc.gov.uk/softwaredevelopers/2021-exrates.html) 
