@@ -18,7 +18,6 @@ package uk.gov.hmrc.currencyconversion.binders
 
 import java.time.LocalDate
 
-import uk.gov.hmrc.currencyconversion.binders.DateBinder
 import uk.gov.hmrc.play.test.UnitSpec
 
 class BinderSpec extends UnitSpec{
