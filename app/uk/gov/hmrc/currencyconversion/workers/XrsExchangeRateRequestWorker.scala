@@ -21,9 +21,12 @@ import akka.stream.{ActorAttributes, Materializer, Supervision}
 import com.google.inject.{Inject, Singleton}
 import play.api.{Configuration, Logger}
 import uk.gov.hmrc.currencyconversion.connectors.HODConnector
+import uk.gov.hmrc.currencyconversion.repositories.WriteExchangeRateRepository
 import uk.gov.hmrc.http.HttpReads.{is2xx, is4xx}
 import uk.gov.hmrc.http.HttpResponse
 import play.api.http.Status.SERVICE_UNAVAILABLE
+import play.api.libs.json.{JsObject, JsValue}
+import uk.gov.hmrc.currencyconversion.repositories.WriteExchangeRateRepository
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -33,7 +36,8 @@ import scala.util.control.Exception._
 @Singleton
 class XrsExchangeRateRequestWorker @Inject()(
   config: Configuration,
-  hodConnector: HODConnector
+  hodConnector: HODConnector,
+  writeExchangeRateRepository: WriteExchangeRateRepository
 )(implicit mat: Materializer, ec: ExecutionContext) {
 
     private val initialDelayFromConfig = config.get[String]("workers.xrs-exchange-rate.initial-delay").replace('.',' ')
@@ -59,7 +63,9 @@ class XrsExchangeRateRequestWorker @Inject()(
       {
         _ => hodConnector.submit().flatMap {
           case response: HttpResponse if is2xx(response.status) =>
-            Logger.info(response.json.toString())
+            val exchangeRatesJson = response.json.as[JsObject] - "timestamp" - "correlationId"
+            writeExchangeRateRepository.writeExchangeRateFile(exchangeRatesJson.toString())
+            writeExchangeRateRepository.deleteOlderFile
             Future.successful(response)
           case response: HttpResponse if is4xx(response.status) =>
             Logger.error(s"XRS_BAD_REQUEST_FROM_EIS_FAILURE  [XrsExchangeRateRequestWorker] call to DES (EIS) is failed. ${response.toString}")
