@@ -16,22 +16,73 @@
 
 package uk.gov.hmrc.currencyconversion.repositories
 
-import java.io.File
+import java.io.{File, PrintWriter}
+import java.time.LocalDate
 
 import org.scalatest.Inspectors._
 import org.scalatest.{Matchers, WordSpec}
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.Application
+import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.test.Injecting
 
-class ExchangeRateRepositorySpec extends WordSpec with Matchers {
+class ExchangeRateRepositorySpec extends WordSpec with GuiceOneAppPerSuite with Matchers with Injecting {
+
+  override lazy val app: Application = {
+    new GuiceApplicationBuilder()
+      .configure(
+        "xrs.file-path" -> "test/resources/json/exrates-monthly"
+      )
+      .build()
+  }
+
+  private lazy val writeExchangeRateRepository: WriteExchangeRateRepository = inject[WriteExchangeRateRepository]
 
     "the rates files stored in memory" should {
 
       "all have the correct format file name" in {
 
-        val fileNames = new File(getClass.getResource("/resources/xml/").toURI).list().toList
+        val fileNames = new File(getClass.getResource("/resources/json/").toURI).list().toList
 
         forAll(fileNames) { fileName =>
-          fileName should fullyMatch regex """exrates-monthly-\d{4}.xml"""
+          fileName should fullyMatch regex """exrates-monthly-\d{4}.json"""
         }
+      }
+
+      "be written correctly" in {
+        val data =
+        """{"timestamp":"2021-06-15T15:41:38Z",
+          |"correlationId":"72a89d23-0fc6-4212-92fc-ea8b05139c76",
+          |"exchangeRates":[{"validFrom":"2021-06-15","validTo":"2021-06-15","currencyCode":"ARS","exchangeRate":133.25,"currencyName":"Peso"}]}"""
+          .stripMargin
+
+        writeExchangeRateRepository.writeExchangeRateFile(data)
+
+        val createdFilePath = "test/resources/json/exrates-monthly-%02d".format(LocalDate.now.getMonthValue) +
+          LocalDate.now.getYear.toString.substring(2) + ".json"
+        val path = new File(createdFilePath)
+        path.canRead shouldBe true
+        path.exists() shouldBe true
+        path.delete()
+      }
+
+      "delete six month older file" in {
+        val data =
+          """{"timestamp":"2021-06-15T15:41:38Z",
+            |"correlationId":"72a89d23-0fc6-4212-92fc-ea8b05139c76",
+            |"exchangeRates":[{"validFrom":"2021-06-15","validTo":"2021-06-15","currencyCode":"ARS","exchangeRate":133.25,"currencyName":"Peso"}]}"""
+            .stripMargin
+
+        val sixMonthOldDate = LocalDate.now.minusMonths(6)
+        val deletePath = "test/resources/json/exrates-monthly-" + "%02d".format(sixMonthOldDate.getMonthValue) +
+          sixMonthOldDate.getYear.toString.substring(2) + ".json"
+        val oldFilePath = new File(deletePath)
+        val writer = new PrintWriter(oldFilePath)
+        writer.write(data)
+        writer.close()
+
+        writeExchangeRateRepository.deleteOlderFile
+        oldFilePath.exists() shouldBe false
       }
   }
 }
