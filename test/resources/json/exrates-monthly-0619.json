@@ -1,61 +1,61 @@
 {
   "exchangeRates" : [ {
-    "validFrom" : "2021-06-17",
-    "validTo" : "2021-06-17",
+    "validFrom" : "2021-06-22",
+    "validTo" : "2021-06-22",
     "currencyCode" : "ARS",
     "exchangeRate" : 133.25,
     "currencyName" : "Peso"
   }, {
-    "validFrom" : "2021-06-17",
-    "validTo" : "2021-06-17",
+    "validFrom" : "2021-06-22",
+    "validTo" : "2021-06-22",
     "currencyCode" : "AUD",
     "exchangeRate" : 1.8263,
     "currencyName" : "Dollar"
   }, {
-    "validFrom" : "2021-06-17",
-    "validTo" : "2021-06-17",
+    "validFrom" : "2021-06-22",
+    "validTo" : "2021-06-22",
     "currencyCode" : "BRL",
     "exchangeRate" : 7.4888,
     "currencyName" : "Real"
   }, {
-    "validFrom" : "2021-06-17",
-    "validTo" : "2021-06-17",
+    "validFrom" : "2021-06-22",
+    "validTo" : "2021-06-22",
     "currencyCode" : "CAD",
     "exchangeRate" : 1.7142,
     "currencyName" : "Dollar"
   }, {
-    "validFrom" : "2021-06-17",
-    "validTo" : "2021-06-17",
+    "validFrom" : "2021-06-22",
+    "validTo" : "2021-06-22",
     "currencyCode" : "DKK",
     "exchangeRate" : 8.6107,
     "currencyName" : "Krone"
   }, {
-    "validFrom" : "2021-06-17",
-    "validTo" : "2021-06-17",
+    "validFrom" : "2021-06-22",
+    "validTo" : "2021-06-22",
     "currencyCode" : "EUR",
     "exchangeRate" : 1.1078,
     "currencyName" : "Euro"
   }, {
-    "validFrom" : "2021-06-17",
-    "validTo" : "2021-06-17",
+    "validFrom" : "2021-06-22",
+    "validTo" : "2021-06-22",
     "currencyCode" : "HKD",
     "exchangeRate" : 10.98,
     "currencyName" : "Dollar"
   }, {
-    "validFrom" : "2021-06-17",
-    "validTo" : "2021-06-17",
+    "validFrom" : "2021-06-22",
+    "validTo" : "2021-06-22",
     "currencyCode" : "USD",
     "exchangeRate" : 1.4146,
     "currencyName" : "Dollar"
   }, {
-    "validFrom" : "2021-06-17",
-    "validTo" : "2021-06-17",
+    "validFrom" : "2021-06-22",
+    "validTo" : "2021-06-22",
     "currencyCode" : "INR",
     "exchangeRate" : 103.51,
     "currencyName" : "Rupee"
   }, {
-    "validFrom" : "2021-06-17",
-    "validTo" : "2021-06-17",
+    "validFrom" : "2021-06-22",
+    "validTo" : "2021-06-22",
     "currencyCode" : "JPY",
     "exchangeRate" : 152.61,
     "currencyName" : "Yen"

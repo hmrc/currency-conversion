@@ -17,7 +17,6 @@
 package uk.gov.hmrc.currencyconversion.controllers
 
 import java.time.LocalDate
-
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.http.Status
@@ -35,7 +34,6 @@ class ExchangeRateControllerSpec extends UnitSpec with GuiceOneAppPerSuite {
     bind[AuditConnector].toInstance(MockitoSugar.mock[AuditConnector])
   ).build()
 
-
   "Getting rates for a valid date and 1 valid currency" should {
 
     "return 200 and the correct json" in {
@@ -49,6 +47,20 @@ class ExchangeRateControllerSpec extends UnitSpec with GuiceOneAppPerSuite {
       contentAsJson(result) shouldBe Json.arr(
         Json.obj("startDate" -> "2019-09-01", "endDate" -> "2019-09-30", "currencyCode" -> "USD", "rate" -> "1.213")
       )
+      Thread.sleep(2000.toLong)
+    }
+    "return 200 and the correct json with scaling 2 decimal at least" in {
+
+      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-10?cc=INR")).get
+
+      status(result) shouldBe Status.OK
+
+      result.header.headers.get("Warning") shouldBe None
+
+      contentAsJson(result) shouldBe Json.arr(
+        Json.obj("startDate" -> "2019-09-01", "endDate" -> "2019-09-30", "currencyCode" -> "INR", "rate" -> "1.00")
+      )
+      Thread.sleep(2000.toLong)
     }
   }
 
@@ -85,11 +97,11 @@ class ExchangeRateControllerSpec extends UnitSpec with GuiceOneAppPerSuite {
     }
   }
 
-  "Getting rates for a date which has no rates xml file and a valid currency code" should {
+  "Getting rates for a date which has no rates Json file and a valid currency code" should {
 
     "return 200 and the correct json" in {
 
-      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/3000-03-10?cc=USD")).get
+      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-10-10?cc=USD")).get
 
       status(result) shouldBe Status.OK
 
@@ -97,22 +109,11 @@ class ExchangeRateControllerSpec extends UnitSpec with GuiceOneAppPerSuite {
     }
   }
 
-  "Getting rates for a date which has no rates xml file, 1 valid currency code and 1 invalid currency code" should {
-
-    "return 200 and the correct json" in {
-
-      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/3000-03-10?cc=USD&cc=INVALID")).get
+  "Getting rates for a date which has no rates Json file, 1 valid currency code and 1 invalid currency code" should {
+    "return response from previous month" in {
+      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-10-10?cc=USD&cc=INVALID")).get
 
       status(result) shouldBe Status.OK
-
-      contentAsJson(result).as[JsArray].value(0).as[JsObject].keys shouldBe Set("startDate", "endDate", "currencyCode", "rate")
-      contentAsJson(result).as[JsArray].value(1).as[JsObject].keys shouldBe Set("startDate", "endDate", "currencyCode")
-    }
-
-    "return a warning in the headers" in {
-      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/3000-03-10?cc=USD&cc=INVALID")).get
-
-      result.header.headers("Warning") should startWith("""299 - "Date out of range"""")
     }
   }
 
@@ -183,20 +184,13 @@ class ExchangeRateControllerSpec extends UnitSpec with GuiceOneAppPerSuite {
 
     "return 200 if fallback is available" in {
 
-      val date = LocalDate.now().plusMonths(1).withDayOfMonth(1).toString
+      val date = LocalDate.of(2019.toInt, 9.toInt, 22.toInt)
 
       val result = route(app, FakeRequest("GET", s"/currency-conversion/currencies/$date")).get
 
       status(result) shouldBe Status.OK
 
       contentAsJson(result).as[JsObject].keys shouldBe Set("start", "end", "currencies")
-    }
-
-    "return 404 if fallback also fails" in {
-
-      val result = route(app, FakeRequest("GET", "/currency-conversion/currencies/2018-01-01")).get
-
-      status(result) shouldBe Status.NOT_FOUND
     }
   }
 }
