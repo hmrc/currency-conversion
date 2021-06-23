@@ -45,7 +45,7 @@ class HODConnector @Inject() (
   private val environment = config.get[String]("microservice.services.des.environment")
 
   private val CORRELATION_ID: String = "X-Correlation-ID"
-  private val ENVIRONMENT: String = "environment"
+  private val ENVIRONMENT: String = "Environment"
 
    def submit(): Future[HttpResponse] = {
 
