@@ -42,8 +42,10 @@ class HODConnector @Inject() (
   private val bearerToken = config.get[String]("microservice.services.des.bearer-token")
   private val baseUrl = config.get[Service]("microservice.services.des")
   private val xrsEndPoint = config.get[String]("microservice.services.des.endpoint")
+  private val environment = config.get[String]("microservice.services.des.environment")
 
   private val CORRELATION_ID: String = "X-Correlation-ID"
+  private val ENVIRONMENT: String = "environment"
 
    def submit(): Future[HttpResponse] = {
 
@@ -55,7 +57,9 @@ class HODConnector @Inject() (
           HeaderNames.CONTENT_TYPE -> ContentTypes.JSON,
           HeaderNames.DATE -> now,
           HeaderNames.AUTHORIZATION -> s"Bearer $bearerToken",
-          CORRELATION_ID -> UUID.randomUUID.toString)
+          CORRELATION_ID -> UUID.randomUUID.toString,
+          ENVIRONMENT -> environment
+        )
     }
 
     def call (implicit hc: HeaderCarrier): Future[HttpResponse] =

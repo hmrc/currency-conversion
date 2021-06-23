@@ -16,44 +16,14 @@
 
 package uk.gov.hmrc.currencyconversion.repositories
 
-import java.io.InputStream
+import com.google.inject.ImplementedBy
+
 import java.time.LocalDate
-
 import uk.gov.hmrc.currencyconversion.models.{ConversionRatePeriod, CurrencyPeriod}
-import uk.gov.hmrc.currencyconversion.utils.{CurrencyParsing, ExchangeRateParsing}
 
-import scala.xml.XML
-
-class ConversionRatePeriodRepository {
-
-  private def xmlStreams(month: Int = 9, year: Int = 19): Stream[InputStream] = {
-    val nextMonth = if (month == 12) 1 else month + 1
-    val nextYear = if (month == 12) year + 1 else year
-
-    val file = "/resources/xml/exrates-monthly-" + "%02d".format(month) + year + ".xml"
-
-    val inputStream: Option[InputStream] = Option(getClass.getResourceAsStream(file))
-
-    inputStream match {
-      case Some(resource) => resource #:: xmlStreams(nextMonth, nextYear)
-      case None => Stream.empty
-    }
-  }
-
-  lazy val conversionRatePeriods: Seq[ConversionRatePeriod] =
-    xmlStreams().map(XML.load).flatMap(ExchangeRateParsing.ratesFromXml).reverse
-
-  lazy val currencyPeriods: Seq[CurrencyPeriod] =
-    xmlStreams().map(XML.load).flatMap(CurrencyParsing.currenciesFromXml).reverse
-
-  def getConversionRatePeriod(date: LocalDate): Option[ConversionRatePeriod] =
-    conversionRatePeriods.find(crp => (crp.startDate.isBefore(date) || crp.startDate.isEqual(date)) && (crp.endDate.isAfter(date) || crp.endDate.isEqual(date)))
-
-  def getLatestConversionRatePeriod: ConversionRatePeriod =
-    conversionRatePeriods.head
-
-  def getCurrencyPeriod(date: LocalDate): Option[CurrencyPeriod] =
-    currencyPeriods.find(cp =>
-      (cp.start.isBefore(date) || cp.start.isEqual(date)) && (cp.end.isAfter(date) || cp.end.isEqual(date)))
-
+@ImplementedBy(classOf[ConversionRatePeriodJson])
+trait ConversionRatePeriodRepository {
+  def getConversionRatePeriod(date: LocalDate): Option[ConversionRatePeriod]
+  def getLatestConversionRatePeriod(date: LocalDate): ConversionRatePeriod
+  def getCurrencyPeriod(date: LocalDate): Option[CurrencyPeriod]
 }
