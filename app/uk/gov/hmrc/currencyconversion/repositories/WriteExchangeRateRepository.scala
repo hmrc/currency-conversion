@@ -27,32 +27,27 @@ import play.api.libs.json.Json
 
 class WriteExchangeRateRepository @Inject() (
   config: Configuration,
-  ) {
+  ) extends App {
 
-  private val path = config.get[String]("xrs.file-path")
-  private val pathToOutputFile = path + "-%02d".format(LocalDate.now.getMonthValue) +
-    LocalDate.now.getYear.toString.substring(2) + ".json"
+  lazy private val path = config.get[String]("xrs.file-path")
 
   def writeExchangeRateFile(exchangeRateData: String): Unit = {
+    val pathToJson = getClass.getResource(path + "-%02d".format(LocalDate.now.getMonthValue) +
+      LocalDate.now.getYear.toString.substring(2) + ".json").getPath
+
     val jsValue = Json parse exchangeRateData
     val exchangeRateFormatData = Json.prettyPrint(jsValue)
 
     val result = Try {
-      val writer = new PrintWriter(new File(pathToOutputFile))
+      val writer = new PrintWriter(new File(pathToJson))
       writer.write(exchangeRateFormatData)
       writer.close()
     }
     result match {
       case Success(_) =>
-        Logger.info(" [WriteExchangeRateRepository] Writing to file successful " + pathToOutputFile)
+        Logger.info(" [WriteExchangeRateRepository] Writing to file successful " + pathToJson)
       case Failure(e) =>
         Logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_FAILURE  [WriteExchangeRateRepository] writing to file failed. $e")
-        val x = path + "0919.json"
-        val filePath = new File(x)
-        if(filePath.exists())
-          Logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_FAILURE  [WriteExchangeRateRepository] File Exists. $filePath")
-        else
-          Logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_FAILURE  [WriteExchangeRateRepository] File does not Exists. $filePath")
     }
   }
 
