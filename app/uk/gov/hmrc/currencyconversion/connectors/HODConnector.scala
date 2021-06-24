@@ -63,7 +63,7 @@ class HODConnector @Inject() (
     }
 
     def call (implicit hc: HeaderCarrier): Future[HttpResponse] =
-      http.POST[String, HttpResponse](s"$baseUrl$xrsEndPoint", "")
+      http.POST[String, HttpResponse](s"$baseUrl$xrsEndPoint", "{}")
 
     circuitBreaker.withCircuitBreaker(call)
       .fallbackTo(Future.successful(HttpResponse(SERVICE_UNAVAILABLE, s"Fall back response from $baseUrl$xrsEndPoint")))
