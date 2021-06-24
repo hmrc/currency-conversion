@@ -22,13 +22,13 @@ import com.google.inject.Inject
 import play.api.http.{ContentTypes, HeaderNames}
 import play.api.Configuration
 import play.api.http.Status.SERVICE_UNAVAILABLE
+import play.api.libs.json.{JsValue, Json}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.currencyconversion.models.Service
+
 import java.util.UUID
-
 import javax.inject.Singleton
-
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -63,7 +63,7 @@ class HODConnector @Inject() (
     }
 
     def call (implicit hc: HeaderCarrier): Future[HttpResponse] =
-      http.POST[String, HttpResponse](s"$baseUrl$xrsEndPoint", "{}")
+      http.POST[JsValue, HttpResponse](s"$baseUrl$xrsEndPoint", Json.parse("""{}"""))
 
     circuitBreaker.withCircuitBreaker(call)
       .fallbackTo(Future.successful(HttpResponse(SERVICE_UNAVAILABLE, s"Fall back response from $baseUrl$xrsEndPoint")))
