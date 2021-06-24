@@ -47,6 +47,12 @@ class WriteExchangeRateRepository @Inject() (
         Logger.info(" [WriteExchangeRateRepository] Writing to file successful " + pathToOutputFile)
       case Failure(e) =>
         Logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_FAILURE  [WriteExchangeRateRepository] writing to file failed. $e")
+        val x = path + "0919.json"
+        val filePath = new File(x)
+        if(filePath.exists())
+          Logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_FAILURE  [WriteExchangeRateRepository] File Exists. $filePath")
+        else
+          Logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_FAILURE  [WriteExchangeRateRepository] File does not Exists. $filePath")
     }
   }
 
