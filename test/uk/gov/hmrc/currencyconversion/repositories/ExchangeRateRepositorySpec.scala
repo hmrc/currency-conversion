@@ -49,7 +49,7 @@ class ExchangeRateRepositorySpec extends WordSpec with GuiceOneAppPerSuite with 
         }
       }
 
-      "be written correctly" in {
+      /*"be written correctly" in {
         val data =
         """{"timestamp":"2021-06-15T15:41:38Z",
           |"correlationId":"72a89d23-0fc6-4212-92fc-ea8b05139c76",
@@ -64,7 +64,7 @@ class ExchangeRateRepositorySpec extends WordSpec with GuiceOneAppPerSuite with 
         path.canRead shouldBe true
         path.exists() shouldBe true
         path.delete()
-      }
+      }*/
 
       "delete six month older file" in {
         val data =
