@@ -39,7 +39,7 @@ class DefaultExchangeRateRepository @Inject() (
   ) (implicit ec: ExecutionContext, m: Materializer) extends ExchangeRateRepository {
 
   private val collectionName: String = "exchangeCurrencyData"
-  private val date = LocalDate.now().plusMonths(1)
+  private val date = LocalDate.now()
   private val currentFileName: String = "exrates-monthly-%02d".format(date.getMonthValue) +
     date.getYear.toString.substring(2)
 
@@ -62,11 +62,18 @@ class DefaultExchangeRateRepository @Inject() (
   def get(fileName: String): Future[Option[ExchangeRateObject]] =
     collection.flatMap(_.find(Json.obj("_id" -> fileName), None).one[ExchangeRateObject])
 
+  def isDataExists(fileName: String): Future[Boolean] = {
+    get(currentFileName) map {
+      case response if response.isEmpty => false
+      case _ => true
+    }
+  }
+
   def insert(exchangeRateData: JsObject): Unit = {
     val data = ExchangeRateObject(currentFileName, exchangeRateData)
     collection.flatMap(_.insert(ordered = true, WriteConcern.Journaled).one(data)).map {
-      case wr: reactivemongo.api.commands.WriteResult if wr.writeErrors.isEmpty => ()
-      case e => Logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_FAILURE  [ExchangeRateRepository] writing to mongo failed. $e")
+      case wr: reactivemongo.api.commands.WriteResult if wr.writeErrors.isEmpty => Logger.info(s"[ExchangeRateRepository] writing to mongo is successful $currentFileName")
+      case e => Logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_FAILURE [ExchangeRateRepository] writing to mongo is failed $e")
     }
   }
 
@@ -74,20 +81,14 @@ class DefaultExchangeRateRepository @Inject() (
     val data = ExchangeRateObject(currentFileName, exchangeRateData)
     val selector = Json.obj("_id" -> data.fileName)
 
-    /*    collection.flatMap {
-      _.findAndUpdate(selector, data, fetchNewObject = true)
-        .map {
-          _.result[ExchangeRateObject]
-            .getOrElse(Logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_FAILURE  [ExchangeRateRepository] Updating to mongo failed."))
-        }
-    }*/
-
     collection.flatMap {
       _.findAndUpdate(selector = selector, update = data, fetchNewObject = true, upsert = false, sort = None,
         fields = None, bypassDocumentValidation = false, writeConcern = WriteConcern.Acknowledged,
         maxTime = None, None, Nil) map {
-        _.result[ExchangeRateObject]
-          .getOrElse(Logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_FAILURE  [ExchangeRateRepository] Updating to mongo failed."))
+        _.result[ExchangeRateObject] match {
+          case success if success.isDefined => Logger.info(s"[ExchangeRateRepository] updating to mongo is successful $currentFileName")
+          case _ => Logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_FAILURE [ExchangeRateRepository] updating to mongo is failed")
+        }
       }
     }
   }
@@ -95,10 +96,19 @@ class DefaultExchangeRateRepository @Inject() (
 
   def deleteOlderExchangeData: Unit = {
     val sixMonthOldDate = LocalDate.now.minusMonths(6.toInt)
-    val deleteData = "exrates-monthly-%02d".format(sixMonthOldDate.getMonthValue) +
+    val oldFileName = "exrates-monthly-%02d".format(sixMonthOldDate.getMonthValue) +
       sixMonthOldDate.getYear.toString.substring(2)
 
-    collection.flatMap(_.findAndRemove(Json.obj("_id" -> deleteData)).map(_.result[ExchangeRateObject]))
+    val selector = Json.obj("_id" -> oldFileName)
+    collection.flatMap {
+      _.findAndRemove(selector = selector, sort = None, fields = None, writeConcern = WriteConcern.Acknowledged,
+        maxTime = None, None, Nil).map {
+        _.result[ExchangeRateObject] match {
+          case success if success.isDefined => Logger.info(s"[ExchangeRateRepository] deleting older data from mongo is successful $oldFileName")
+          case _ => Logger.info(s"[ExchangeRateRepository] no older data is available")
+        }
+      }
+    }
   }
 
   def insertOrUpdate(exchangeRateData: JsObject):  Unit = {
@@ -116,4 +126,5 @@ trait ExchangeRateRepository {
   def get(fileName: String): Future[Option[ExchangeRateObject]]
   def insertOrUpdate(data: JsObject)
   def deleteOlderExchangeData
+  def isDataExists(fileName: String): Future[Boolean]
 }

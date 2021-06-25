@@ -19,12 +19,10 @@ package uk.gov.hmrc.currencyconversion.repositories
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.{JsSuccess, JsValue, Reads}
 import uk.gov.hmrc.currencyconversion.models.{ConversionRatePeriod, Currency, CurrencyPeriod}
-
 import java.time.LocalDate
 import play.api.{Configuration, Environment, Logger}
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-
 import javax.inject.Inject
 import play.api.libs.json.Json
 import play.api.libs.json.OFormat.oFormatFromReadsAndOWrites
