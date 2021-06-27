@@ -36,7 +36,7 @@ class ExchangeRateRepositorySpec extends WordSpec with GuiceOneAppPerSuite with 
       .build()
   }
 
-  private lazy val writeExchangeRateRepository: WriteExchangeRateRepository = inject[WriteExchangeRateRepository]
+  private lazy val writeExchangeRateRepository: DefaultExchangeRateRepository = inject[DefaultExchangeRateRepository]
 
     "the rates files stored in memory" should {
 
@@ -81,7 +81,7 @@ class ExchangeRateRepositorySpec extends WordSpec with GuiceOneAppPerSuite with 
         writer.write(data)
         writer.close()
 
-        writeExchangeRateRepository.deleteOlderFile
+        writeExchangeRateRepository.deleteOlderExchangeData
         oldFilePath.exists() shouldBe false
       }
   }

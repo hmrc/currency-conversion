@@ -16,9 +16,11 @@
 
 package uk.gov.hmrc.currencyconversion.repositories
 
+import akka.stream.Materializer
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.{JsSuccess, JsValue, Reads}
 import uk.gov.hmrc.currencyconversion.models.{ConversionRatePeriod, Currency, CurrencyPeriod}
+
 import java.time.LocalDate
 import play.api.{Configuration, Environment, Logger}
 import play.api.libs.json._
@@ -27,9 +29,14 @@ import javax.inject.Inject
 import play.api.libs.json.Json
 import play.api.libs.json.OFormat.oFormatFromReadsAndOWrites
 
-class ConversionRatePeriodJson @Inject()(environment: Environment, config: Configuration) extends ConversionRatePeriodRepository {
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.language.postfixOps
 
-  private val path = config.get[String]("xrs.input-file-path")
+
+class ConversionRatePeriodJson @Inject()(environment: Environment, config: Configuration,
+                                         writeExchangeRateRepository: ExchangeRateRepository)
+                                        (implicit ec: ExecutionContext, m: Materializer) extends ConversionRatePeriodRepository {
 
   case class ExchangeRate(
                            validFrom: LocalDate,
@@ -42,8 +49,8 @@ class ConversionRatePeriodJson @Inject()(environment: Environment, config: Confi
   object ExchangeRate {
 
     implicit lazy val reads: Reads[ExchangeRate] = (
-      (__ \ "validFrom").read[LocalDate] and
-        (__ \ "validTo").read[LocalDate] and
+        (__ \ "validFrom").read[LocalDate] and
+        (__ \"validTo").read[LocalDate] and
         (__ \ "currencyCode").read[String] and
         (__ \ "exchangeRate").read[BigDecimal] and
         (__ \ "currencyName").read[String]
@@ -51,15 +58,28 @@ class ConversionRatePeriodJson @Inject()(environment: Environment, config: Confi
 
     implicit lazy val writes: OWrites[ExchangeRate] = Json.writes[ExchangeRate]
   }
+  case class ExchangeRateData(
+                           timestamp: String,
+                           correlationId: String,
+                           exchangeData: Seq[ExchangeRate]
+                         )
+
+  object ExchangeRateData {
+
+    implicit lazy val reads: Reads[ExchangeRateData] = (
+        (__  \ "timestamp").read[String] and
+        (__  \"correlationId").read[String] and
+        (__  \ "exchangeRates").read[Seq[ExchangeRate]]
+      )(ExchangeRateData.apply _)
+
+    implicit lazy val writes: OWrites[ExchangeRateData] = Json.writes[ExchangeRateData]
+  }
 
   private def getExchangeRateFileName(date : LocalDate) : String = {
+    val targetFileName = "exrates-monthly-%02d".format(date.getMonthValue) +
+      date.getYear.toString.substring(2)
 
-    def getFileName(date : LocalDate) : String = path + "-%02d".format(date.getMonthValue) +
-      date.getYear.toString.substring(2) + ".json"
-
-    val targetFileName = getFileName(date)
-
-    if (environment.getFile(s"conf/$targetFileName").exists()) {
+    if (!writeExchangeRateRepository.isDataPresent(targetFileName)) {
       targetFileName
     } else {
       Logger.info(s"$targetFileName is not present")
@@ -67,18 +87,21 @@ class ConversionRatePeriodJson @Inject()(environment: Environment, config: Confi
     }
   }
 
+  /*
   private def getExchangeRates(filePath: String): Map[String, Option[BigDecimal]] = {
+
+    getExchangeRates1(filePath)
 
     def getMinimumDecimalScale(rate : BigDecimal) : BigDecimal = {
       if (rate.scale < 2) rate.setScale(2) else rate
     }
 
-    lazy val conversionRatePeriods: Seq[Map[String, Option[BigDecimal]]] = environment.resourceAsStream(filePath) match {
+    lazy val conversionRatePeriods: Seq[Map[String, Option[BigDecimal]]] = environment.resourceAsStream("json/exrates-monthly-0621.json") match {
       case Some(stream) => {
         val jsVal : JsValue = Json.parse(stream)("exchangeRates")
         jsVal.validate[Seq[ExchangeRate]] match {
           case JsSuccess(seq, _) => seq map { xrsResponse =>
-             Map(xrsResponse.currencyCode -> Some(getMinimumDecimalScale(xrsResponse.exchangeRate)))
+            Map(xrsResponse.currencyCode -> Some(getMinimumDecimalScale(xrsResponse.exchangeRate)))
           }
           case _ => {
             Logger.error(s"XRS_FILE_CANNOT_BE_READ_ERROR [ConversionRatePeriodJson] Exchange rate file is not able to read.")
@@ -92,7 +115,39 @@ class ConversionRatePeriodJson @Inject()(environment: Environment, config: Confi
       }
     }
     conversionRatePeriods.flatten.toMap
-  }
+  }*/
+
+  private def getExchangeRates(filePath: String) = {
+
+    def getMinimumDecimalScale(rate: BigDecimal): BigDecimal = {
+      if (rate.scale < 2) rate.setScale(2) else rate
+    }
+
+    val exchangeRates : Future[ExchangeRateData] = writeExchangeRateRepository.get(filePath)
+      .map {
+        case response if response.isEmpty => {
+          Logger.error(s"XRS_FILE_CANNOT_BE_READ_ERROR [ConversionRatePeriodJson] Exchange rate file is not able to read.")
+          throw new RuntimeException("Exchange rate file is not able to read.")
+        }
+        case  response => {
+          response.get.exchangeRateData.validate[ExchangeRateData] match {
+            case JsSuccess(seq, _) => seq
+            case _ => {
+              Logger.error(s"XRS_FILE_CANNOT_BE_READ_ERROR [ConversionRatePeriodJson] Exchange rate file is not able to read.")
+              throw new RuntimeException("Exchange rate file is not able to read.")
+            }
+            }
+         }
+        }
+
+    Await.ready(exchangeRates, 2 seconds)
+
+    val result: Seq[Map[String, Option[BigDecimal]]] = exchangeRates.value.get.get.exchangeData map { data =>
+      Map(data.currencyCode -> Some(getMinimumDecimalScale(data.exchangeRate)))
+    }
+
+    result.flatten.toMap
+}
 
   private def getCurrencies(filePath: String): Seq[Currency] = {
     environment.resourceAsStream(filePath) match {

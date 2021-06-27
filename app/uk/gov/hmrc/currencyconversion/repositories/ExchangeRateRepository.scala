@@ -17,10 +17,8 @@
 package uk.gov.hmrc.currencyconversion.repositories
 
 import java.time.LocalDate
-
 import reactivemongo.api.WriteConcern
 import uk.gov.hmrc.currencyconversion.models.ExchangeRateObject
-
 import akka.stream.Materializer
 import com.google.inject.{Inject, Singleton}
 import play.api.Logger
@@ -30,8 +28,9 @@ import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.play.json.ImplicitBSONHandlers.JsObjectDocumentWriter
 import reactivemongo.play.json.collection.JSONCollection
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.language.implicitConversions
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.language.{implicitConversions, postfixOps}
 
 @Singleton
 class DefaultExchangeRateRepository @Inject() (
@@ -62,18 +61,19 @@ class DefaultExchangeRateRepository @Inject() (
   def get(fileName: String): Future[Option[ExchangeRateObject]] =
     collection.flatMap(_.find(Json.obj("_id" -> fileName), None).one[ExchangeRateObject])
 
-  def isDataExists(fileName: String): Future[Boolean] = {
-    get(currentFileName) map {
-      case response if response.isEmpty => false
-      case _ => true
-    }
+  def isDataPresent(fileName: String): Boolean = {
+    val existingData = get(fileName)
+    Await.ready(existingData, 1 second)
+    existingData.value.get.get.isEmpty
   }
 
   def insert(exchangeRateData: JsObject): Unit = {
     val data = ExchangeRateObject(currentFileName, exchangeRateData)
     collection.flatMap(_.insert(ordered = true, WriteConcern.Journaled).one(data)).map {
-      case wr: reactivemongo.api.commands.WriteResult if wr.writeErrors.isEmpty => Logger.info(s"[ExchangeRateRepository] writing to mongo is successful $currentFileName")
-      case e => Logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_FAILURE [ExchangeRateRepository] writing to mongo is failed $e")
+      case wr: reactivemongo.api.commands.WriteResult if wr.writeErrors.isEmpty =>
+        Logger.info(s"[ExchangeRateRepository] writing to mongo is successful $currentFileName")
+      case e => Logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_FAILURE [ExchangeRateRepository] " +
+        s"writing to mongo is failed $e")
     }
   }
 
@@ -125,6 +125,6 @@ trait ExchangeRateRepository {
   def update(data: JsObject)
   def get(fileName: String): Future[Option[ExchangeRateObject]]
   def insertOrUpdate(data: JsObject)
-  def deleteOlderExchangeData
-  def isDataExists(fileName: String): Future[Boolean]
+  def deleteOlderExchangeData()
+  def isDataPresent(fileName: String): Boolean
 }
