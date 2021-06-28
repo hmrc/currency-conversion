@@ -17,16 +17,12 @@
 package uk.gov.hmrc.currencyconversion.repositories
 
 import akka.stream.Materializer
-import play.api.libs.json.Format.GenericFormat
-import play.api.libs.json.{JsSuccess, JsValue, Reads}
-import uk.gov.hmrc.currencyconversion.models.{ConversionRatePeriod, Currency, CurrencyPeriod}
+import play.api.libs.json.JsSuccess
+import uk.gov.hmrc.currencyconversion.models.{ConversionRatePeriod, Currency, CurrencyPeriod, ExchangeRateData}
 
 import java.time.LocalDate
-import play.api.{Configuration, Environment, Logger}
-import play.api.libs.json._
-import play.api.libs.functional.syntax._
+import play.api.Logger
 import javax.inject.Inject
-import play.api.libs.json.Json
 import play.api.libs.json.OFormat.oFormatFromReadsAndOWrites
 
 import scala.concurrent.duration.DurationInt
@@ -34,48 +30,10 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
 
 
-class ConversionRatePeriodJson @Inject()(environment: Environment, config: Configuration,
-                                         writeExchangeRateRepository: ExchangeRateRepository)
+class ConversionRatePeriodJson @Inject()(writeExchangeRateRepository: ExchangeRateRepository)
                                         (implicit ec: ExecutionContext, m: Materializer) extends ConversionRatePeriodRepository {
 
-  case class ExchangeRate(
-                           validFrom: LocalDate,
-                           validTo: LocalDate,
-                           currencyCode: String,
-                           exchangeRate: BigDecimal,
-                           currencyName: String
-                         )
-
-  object ExchangeRate {
-
-    implicit lazy val reads: Reads[ExchangeRate] = (
-        (__ \ "validFrom").read[LocalDate] and
-        (__ \"validTo").read[LocalDate] and
-        (__ \ "currencyCode").read[String] and
-        (__ \ "exchangeRate").read[BigDecimal] and
-        (__ \ "currencyName").read[String]
-      )(ExchangeRate.apply _)
-
-    implicit lazy val writes: OWrites[ExchangeRate] = Json.writes[ExchangeRate]
-  }
-  case class ExchangeRateData(
-                           timestamp: String,
-                           correlationId: String,
-                           exchangeData: Seq[ExchangeRate]
-                         )
-
-  object ExchangeRateData {
-
-    implicit lazy val reads: Reads[ExchangeRateData] = (
-        (__  \ "timestamp").read[String] and
-        (__  \"correlationId").read[String] and
-        (__  \ "exchangeRates").read[Seq[ExchangeRate]]
-      )(ExchangeRateData.apply _)
-
-    implicit lazy val writes: OWrites[ExchangeRateData] = Json.writes[ExchangeRateData]
-  }
-
-  private def getExchangeRateFileName(date : LocalDate) : String = {
+   def getExchangeRateFileName(date : LocalDate) : String = {
     val targetFileName = "exrates-monthly-%02d".format(date.getMonthValue) +
       date.getYear.toString.substring(2)
 
@@ -87,58 +45,31 @@ class ConversionRatePeriodJson @Inject()(environment: Environment, config: Confi
     }
   }
 
-  /*
-  private def getExchangeRates(filePath: String): Map[String, Option[BigDecimal]] = {
-
-    getExchangeRates1(filePath)
-
-    def getMinimumDecimalScale(rate : BigDecimal) : BigDecimal = {
-      if (rate.scale < 2) rate.setScale(2) else rate
-    }
-
-    lazy val conversionRatePeriods: Seq[Map[String, Option[BigDecimal]]] = environment.resourceAsStream("json/exrates-monthly-0621.json") match {
-      case Some(stream) => {
-        val jsVal : JsValue = Json.parse(stream)("exchangeRates")
-        jsVal.validate[Seq[ExchangeRate]] match {
-          case JsSuccess(seq, _) => seq map { xrsResponse =>
-            Map(xrsResponse.currencyCode -> Some(getMinimumDecimalScale(xrsResponse.exchangeRate)))
-          }
-          case _ => {
-            Logger.error(s"XRS_FILE_CANNOT_BE_READ_ERROR [ConversionRatePeriodJson] Exchange rate file is not able to read.")
-            throw new RuntimeException("Exchange rate file is not able to read.")
+   def getExchangeRatesData(filePath: String) : Future[ExchangeRateData] = {
+    writeExchangeRateRepository.get(filePath)
+      .map {
+        case response if response.isEmpty =>
+          Logger.error(s"XRS_FILE_CANNOT_BE_READ_ERROR [ConversionRatePeriodJson] Exchange rate file is not able to read")
+          throw new RuntimeException("Exchange rate data is not able to read.")
+        case  response =>
+          response.get.exchangeRateData.validate[ExchangeRateData] match {
+            case JsSuccess(seq, _) =>
+              seq
+            case _ => {
+              Logger.error(s"XRS_FILE_CANNOT_BE_READ_ERROR [ConversionRatePeriodJson] Exchange rate data mapping is failed")
+              throw new RuntimeException("Exchange rate data mapping is failed")
           }
         }
       }
-      case _ => {
-        Logger.error(s"XRS_FILE_CANNOT_BE_READ_ERROR [ConversionRatePeriodJson] Exchange rate file is not able to read.")
-        throw new RuntimeException("Exchange rate file is not able to read.")
-      }
-    }
-    conversionRatePeriods.flatten.toMap
-  }*/
+  }
 
-  private def getExchangeRates(filePath: String) = {
+   def getExchangeRates(filePath: String) : Map[String, Option[BigDecimal]] = {
 
     def getMinimumDecimalScale(rate: BigDecimal): BigDecimal = {
       if (rate.scale < 2) rate.setScale(2) else rate
     }
 
-    val exchangeRates : Future[ExchangeRateData] = writeExchangeRateRepository.get(filePath)
-      .map {
-        case response if response.isEmpty => {
-          Logger.error(s"XRS_FILE_CANNOT_BE_READ_ERROR [ConversionRatePeriodJson] Exchange rate file is not able to read.")
-          throw new RuntimeException("Exchange rate file is not able to read.")
-        }
-        case  response => {
-          response.get.exchangeRateData.validate[ExchangeRateData] match {
-            case JsSuccess(seq, _) => seq
-            case _ => {
-              Logger.error(s"XRS_FILE_CANNOT_BE_READ_ERROR [ConversionRatePeriodJson] Exchange rate file is not able to read.")
-              throw new RuntimeException("Exchange rate file is not able to read.")
-            }
-            }
-         }
-        }
+    val exchangeRates : Future[ExchangeRateData] = getExchangeRatesData(filePath)
 
     Await.ready(exchangeRates, 2 seconds)
 
@@ -147,26 +78,14 @@ class ConversionRatePeriodJson @Inject()(environment: Environment, config: Confi
     }
 
     result.flatten.toMap
-}
+  }
 
-  private def getCurrencies(filePath: String): Seq[Currency] = {
-    environment.resourceAsStream(filePath) match {
-      case Some(stream) => {
-        val jsVal : JsValue = Json.parse(stream)("exchangeRates")
-        jsVal.validate[Seq[ExchangeRate]] match {
-          case JsSuccess(seq, _) => seq map { xrsResponse =>
-            Currency("", xrsResponse.currencyCode, xrsResponse.currencyName)
-          }
-          case _ => {
-            Logger.error(s"XRS_FILE_CANNOT_BE_READ_ERROR [ConversionRatePeriodJson] Exchange rate file is not able to read.")
-            throw new RuntimeException("Exchange rate file is unable to read.")
-          }
-        }
-      }
-      case _ => {
-        Logger.error(s"XRS_FILE_CANNOT_BE_READ_ERROR [ConversionRatePeriodJson] Exchange rate file is not able to read.")
-        throw new RuntimeException("Exchange rate file is unable to read.")
-      }
+   def getCurrencies(filePath: String): Seq[Currency] = {
+    val exchangeRates : Future[ExchangeRateData] = getExchangeRatesData(filePath)
+    Await.ready(exchangeRates, 2 seconds)
+
+    exchangeRates.value.get.get.exchangeData map { data =>
+      Currency("", data.currencyCode, data.currencyName)
     }
   }
 

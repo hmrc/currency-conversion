@@ -36,9 +36,9 @@ class ExchangeRateRepositorySpec extends WordSpec with GuiceOneAppPerSuite with 
       .build()
   }
 
-  private lazy val writeExchangeRateRepository: DefaultExchangeRateRepository = inject[DefaultExchangeRateRepository]
+  //private lazy val writeExchangeRateRepository: DefaultExchangeRateRepository = inject[DefaultExchangeRateRepository]
 
-    "the rates files stored in memory" should {
+/*    "the rates files stored in memory" should {
 
       "all have the correct format file name" in {
 
@@ -47,7 +47,7 @@ class ExchangeRateRepositorySpec extends WordSpec with GuiceOneAppPerSuite with 
         forAll(fileNames) { fileName =>
           fileName should fullyMatch regex """exrates-monthly-\d{4}.json"""
         }
-      }
+      }*/
 
       /*"be written correctly" in {
         val data =
@@ -66,7 +66,7 @@ class ExchangeRateRepositorySpec extends WordSpec with GuiceOneAppPerSuite with 
         path.delete()
       }*/
 
-      "delete six month older file" in {
+/*      "delete six month older file" in {
         val data =
           """{"timestamp":"2021-06-15T15:41:38Z",
             |"correlationId":"72a89d23-0fc6-4212-92fc-ea8b05139c76",
@@ -84,6 +84,6 @@ class ExchangeRateRepositorySpec extends WordSpec with GuiceOneAppPerSuite with 
         writeExchangeRateRepository.deleteOlderExchangeData
         oldFilePath.exists() shouldBe false
       }
-  }
+  }*/
 }
 

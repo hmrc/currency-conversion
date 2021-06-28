@@ -67,17 +67,19 @@ class DefaultExchangeRateRepository @Inject() (
     existingData.value.get.get.isEmpty
   }
 
-  def insert(exchangeRateData: JsObject): Unit = {
+  def insert(exchangeRateData: JsObject): Future[Any] = {
     val data = ExchangeRateObject(currentFileName, exchangeRateData)
     collection.flatMap(_.insert(ordered = true, WriteConcern.Journaled).one(data)).map {
       case wr: reactivemongo.api.commands.WriteResult if wr.writeErrors.isEmpty =>
         Logger.info(s"[ExchangeRateRepository] writing to mongo is successful $currentFileName")
+        wr
       case e => Logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_FAILURE [ExchangeRateRepository] " +
         s"writing to mongo is failed $e")
+        throw new Exception(s"unable to update declaration ")
     }
   }
 
-  def update(exchangeRateData: JsObject): Unit = {
+  def update(exchangeRateData: JsObject): Future[Option[ExchangeRateObject]] = {
     val data = ExchangeRateObject(currentFileName, exchangeRateData)
     val selector = Json.obj("_id" -> data.fileName)
 
@@ -87,14 +89,16 @@ class DefaultExchangeRateRepository @Inject() (
         maxTime = None, None, Nil) map {
         _.result[ExchangeRateObject] match {
           case success if success.isDefined => Logger.info(s"[ExchangeRateRepository] updating to mongo is successful $currentFileName")
+            success
           case _ => Logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_FAILURE [ExchangeRateRepository] updating to mongo is failed")
+            throw new Exception(s"unable to update declaration ")
         }
       }
     }
   }
 
 
-  def deleteOlderExchangeData: Unit = {
+  def deleteOlderExchangeData():Future[Any] = {
     val sixMonthOldDate = LocalDate.now.minusMonths(6.toInt)
     val oldFileName = "exrates-monthly-%02d".format(sixMonthOldDate.getMonthValue) +
       sixMonthOldDate.getYear.toString.substring(2)
@@ -105,26 +109,30 @@ class DefaultExchangeRateRepository @Inject() (
         maxTime = None, None, Nil).map {
         _.result[ExchangeRateObject] match {
           case success if success.isDefined => Logger.info(s"[ExchangeRateRepository] deleting older data from mongo is successful $oldFileName")
+            success
           case _ => Logger.info(s"[ExchangeRateRepository] no older data is available")
+            Future.successful(None)
         }
       }
     }
   }
 
-  def insertOrUpdate(exchangeRateData: JsObject):  Unit = {
+  def insertOrUpdate(exchangeRateData: JsObject): Future[Any] = {
     get(currentFileName) map {
       case response if response.isEmpty => insert(exchangeRateData)
+        response
       case _ => update(exchangeRateData)
+        Future.successful(None)
     }
   }
 }
 
 trait ExchangeRateRepository {
   val started: Future[Unit]
-  def insert(data: JsObject)
-  def update(data: JsObject)
+  def insert(data: JsObject): Future[Any]
+  def update(data: JsObject): Future[Option[ExchangeRateObject]]
   def get(fileName: String): Future[Option[ExchangeRateObject]]
-  def insertOrUpdate(data: JsObject)
-  def deleteOlderExchangeData()
+  def insertOrUpdate(data: JsObject):Future[Any]
+  def deleteOlderExchangeData():Future[Any]
   def isDataPresent(fileName: String): Boolean
 }
