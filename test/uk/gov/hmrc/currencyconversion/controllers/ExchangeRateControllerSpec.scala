@@ -19,7 +19,7 @@ package uk.gov.hmrc.currencyconversion.controllers
 
 import org.mockito.Matchers.{any, anyObject}
 import org.mockito.Mockito
-import org.mockito.Mockito.{doNothing, doReturn, spy, when}
+import org.mockito.Mockito.doReturn
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
@@ -28,7 +28,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsArray, JsObject, Json}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.currencyconversion.repositories.{DefaultExchangeRateRepository, ExchangeRateRepository}
+import uk.gov.hmrc.currencyconversion.repositories.ExchangeRateRepository
 import uk.gov.hmrc.play.test.UnitSpec
 import play.api.Application
 import uk.gov.hmrc.currencyconversion.models.ExchangeRateObject

@@ -52,7 +52,7 @@ object ExchangeRateData {
 
   implicit lazy val reads: Reads[ExchangeRateData] = (
     (__  \ "timestamp").read[String] and
-      (__  \"correlationId").read[String] and
+      (__  \"correlationid").read[String] and
       (__  \ "exchangeRates").read[Seq[ExchangeRate]]
     )(ExchangeRateData.apply _)
 
