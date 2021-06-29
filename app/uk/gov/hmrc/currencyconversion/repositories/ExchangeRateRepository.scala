@@ -98,7 +98,7 @@ class DefaultExchangeRateRepository @Inject() (
   }
 
 
-  def deleteOlderExchangeData():Future[Any] = {
+  private def deleteOlderExchangeData():Future[Any] = {
     val sixMonthOldDate = LocalDate.now.minusMonths(6.toInt)
     val oldFileName = "exrates-monthly-%02d".format(sixMonthOldDate.getMonthValue) +
       sixMonthOldDate.getYear.toString.substring(2)
@@ -124,6 +124,7 @@ class DefaultExchangeRateRepository @Inject() (
       case _ => update(exchangeRateData)
         Future.successful(None)
     }
+    deleteOlderExchangeData()
   }
 }
 
@@ -133,6 +134,5 @@ trait ExchangeRateRepository {
   def update(data: JsObject): Future[Option[ExchangeRateObject]]
   def get(fileName: String): Future[Option[ExchangeRateObject]]
   def insertOrUpdate(data: JsObject):Future[Any]
-  def deleteOlderExchangeData():Future[Any]
   def isDataPresent(fileName: String): Boolean
 }

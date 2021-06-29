@@ -160,9 +160,10 @@ class ExchangeRateControllerSpec extends UnitSpec with GuiceOneAppPerSuite with 
          contentAsJson(result).as[JsArray].value(0).as[JsObject].keys shouldBe Set("startDate", "endDate", "currencyCode", "rate")
        }
      }
-  /*
+
      "Getting rates for a date which has no rates Json file, 1 valid currency code and 1 invalid currency code" should {
        "return response from previous month" in {
+         doReturn(true) when exchangeRateRepository isDataPresent "exrates-monthly-1019"
          val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-10-10?cc=USD&cc=INVALID")).get
 
          status(result) shouldBe Status.OK
@@ -209,7 +210,7 @@ class ExchangeRateControllerSpec extends UnitSpec with GuiceOneAppPerSuite with 
 
        }
      }
-*/
+
      "Getting currencies for a valid date" should {
 
        "return 200 and the correct json" in {

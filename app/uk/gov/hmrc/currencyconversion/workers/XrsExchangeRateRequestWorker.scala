@@ -64,7 +64,6 @@ class XrsExchangeRateRequestWorker @Inject()(
           case response: HttpResponse if is2xx(response.status) =>
             val exchangeRatesJson = response.json.as[JsObject]
             writeExchangeRateRepository.insertOrUpdate(exchangeRatesJson)
-            writeExchangeRateRepository.deleteOlderExchangeData()
             Future.successful(response)
           case response: HttpResponse if is4xx(response.status) =>
             Logger.error(s"XRS_BAD_REQUEST_FROM_EIS_FAILURE  [XrsExchangeRateRequestWorker] call to DES (EIS) is failed. ${response.toString}")
