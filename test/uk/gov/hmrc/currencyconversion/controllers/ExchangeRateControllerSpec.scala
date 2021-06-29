@@ -62,7 +62,7 @@ class ExchangeRateControllerSpec extends UnitSpec with GuiceOneAppPerSuite with 
   val data: String =
     """{
       |        "timestamp" : "2019-06-28T13:17:21Z",
-      |        "correlationId" : "c4a81105-9417-4080-9cd2-c4469efc965c",
+      |        "correlationid" : "c4a81105-9417-4080-9cd2-c4469efc965c",
       |        "exchangeRates" : [
       |            {
       |                "validFrom" : "2019-09-01",
