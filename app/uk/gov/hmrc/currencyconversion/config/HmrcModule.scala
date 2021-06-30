@@ -20,11 +20,13 @@ import akka.pattern.CircuitBreaker
 import play.api.inject.{Binding, Module}
 import play.api.{Configuration, Environment}
 import uk.gov.hmrc.currencyconversion.workers.XrsExchangeRateRequestWorker
+import uk.gov.hmrc.currencyconversion.repositories.{DefaultExchangeRateRepository, ExchangeRateRepository}
 
 class HmrcModule extends Module {
   override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] = {
 
     Seq(
+      bind[ExchangeRateRepository].to[DefaultExchangeRateRepository].eagerly,
       bind[CircuitBreaker].qualifiedWith("des").toProvider[DesCircuitBreakerProvider],
       bind[XrsExchangeRateRequestWorker].toSelf.eagerly,
     )
