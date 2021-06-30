@@ -14,25 +14,18 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.currencyconversion.repositories
+package uk.gov.hmrc.currencyconversion.connectors
 
-import java.io.File
+import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
+import org.joda.time.{DateTime, DateTimeZone}
 
-import org.scalatest.Inspectors._
-import org.scalatest.{Matchers, WordSpec}
+trait HttpDate {
 
-class ExchangeRateRepositorySpec extends WordSpec with Matchers {
+  protected val dateFormatter: DateTimeFormatter =
+    DateTimeFormat
+      .forPattern("EEE, dd MMM yyyy HH:mm:ss 'GMT'")
+      .withZone(DateTimeZone.UTC)
 
-    "the rates files stored in memory" should {
-
-      "all have the correct format file name" in {
-
-        val fileNames = new File(getClass.getResource("/resources/xml/").toURI).list().toList
-
-        forAll(fileNames) { fileName =>
-          fileName should fullyMatch regex """exrates-monthly-\d{4}.xml"""
-        }
-      }
-  }
+  def now: String =
+    dateFormatter.print(DateTime.now.withZone(DateTimeZone.UTC))
 }
-
