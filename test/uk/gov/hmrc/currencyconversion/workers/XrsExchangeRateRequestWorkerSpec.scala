@@ -36,7 +36,7 @@ class XrsExchangeRateRequestWorkerSpec extends FreeSpec with MustMatchers
 
   private val mockedJsonResponse =
     """{"timestamp":"2021-06-15T15:41:38Z",
-      |"correlationId":"72a89d23-0fc6-4212-92fc-ea8b05139c76",
+      |"correlationid":"72a89d23-0fc6-4212-92fc-ea8b05139c76",
       |"exchangeRates":[{"validFrom":"2021-06-15","validTo":"2021-06-15","currencyCode":"ARS","exchangeRate":133.25,"currencyName":"Peso"}]}"""
       .stripMargin
 
