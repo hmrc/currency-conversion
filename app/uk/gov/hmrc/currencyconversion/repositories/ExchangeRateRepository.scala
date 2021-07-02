@@ -73,7 +73,7 @@ class DefaultExchangeRateRepository @Inject() (
       case wr: reactivemongo.api.commands.WriteResult if wr.writeErrors.isEmpty =>
         Logger.info(s"[ExchangeRateRepository] writing to mongo is successful $currentFileName")
         wr
-      case e => Logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_FAILURE [ExchangeRateRepository] " +
+      case e => Logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_ERROR [ExchangeRateRepository] " +
         s"writing to mongo is failed $e")
         throw new Exception(s"unable to insert exchangeRateRepository $e")
     }
@@ -90,7 +90,7 @@ class DefaultExchangeRateRepository @Inject() (
         _.result[ExchangeRateObject] match {
           case success if success.isDefined => Logger.info(s"[ExchangeRateRepository] updating to mongo is successful $currentFileName")
             success
-          case _ => Logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_FAILURE [ExchangeRateRepository] updating to mongo is failed")
+          case _ => Logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_ERROR [ExchangeRateRepository] updating to mongo is failed")
             throw new Exception(s"unable to update exchangeRateRepository")
         }
       }

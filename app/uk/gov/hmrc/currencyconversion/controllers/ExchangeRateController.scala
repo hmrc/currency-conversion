@@ -43,7 +43,7 @@ class ExchangeRateController @Inject() (
     val rates = exchangeRateResults.map(_.rate)
 
     if (exchangeRateResults.exists(result => result.isInstanceOf[ExchangeRateOldFileResult])) {
-      Logger.error("Using older exchange rates file as file for supplied date could not be found...")
+      Logger.error("XRS_FILE_NOT_AVAILABLE_ERROR [ExchangeRateController] [getRatesByCurrencyCode] Using older XRS file as XRS file for supplied date could not be found...")
       Future.successful(Ok(Json.toJson(rates)).withHeaders(WARNING -> s"""299 - "Date out of range" "$dateTime""""))
     }
     else {

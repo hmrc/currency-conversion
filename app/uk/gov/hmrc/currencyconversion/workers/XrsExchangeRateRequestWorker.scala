@@ -66,9 +66,9 @@ class XrsExchangeRateRequestWorker @Inject()(
             writeExchangeRateRepository.insertOrUpdate(exchangeRatesJson)
             Future.successful(response)
           case response: HttpResponse if is4xx(response.status) =>
-            Logger.error(s"XRS_BAD_REQUEST_FROM_EIS_FAILURE  [XrsExchangeRateRequestWorker] call to DES (EIS) is failed. ${response.toString}")
+            Logger.error(s"XRS_BAD_REQUEST_FROM_EIS_ERROR  [XrsExchangeRateRequestWorker] call to DES (EIS) is failed. ${response.toString}")
             Future.successful(response)
-          case _ => Logger.error(s"XRS_BAD_REQUEST_FROM_EIS_FAILURE [XrsExchangeRateRequestWorker] BAD Request is received from DES (EIS)")
+          case _ => Logger.error(s"XRS_BAD_REQUEST_FROM_EIS_ERROR [XrsExchangeRateRequestWorker] BAD Request is received from DES (EIS)")
             Future.successful(HttpResponse(SERVICE_UNAVAILABLE, "Service Unavailable"))
         }
       }
