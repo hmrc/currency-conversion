@@ -38,8 +38,9 @@ class DefaultExchangeRateRepository @Inject() (
   ) (implicit ec: ExecutionContext, m: Materializer) extends ExchangeRateRepository {
 
   private val collectionName: String = "exchangeCurrencyData"
-  private val date = LocalDate.now()
-  private val currentFileName: String = "exrates-monthly-%02d".format(date.getMonthValue) +
+
+  private def date = LocalDate.now()
+  private def currentFileName: String = "exrates-monthly-%02d".format(date.getMonthValue) +
     date.getYear.toString.substring(2)
 
   private def collection: Future[JSONCollection] =
