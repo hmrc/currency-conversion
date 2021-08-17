@@ -8,7 +8,7 @@ import scala.util.matching.Regex
 val appName = "currency-conversion"
 
 lazy val microservice = Project(appName, file("."))
-  .enablePlugins(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin, SbtArtifactory)
+  .enablePlugins(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtDistributablesPlugin)
   .settings(
     libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test(),
     retrieveManaged := true,
@@ -29,9 +29,8 @@ lazy val microservice = Project(appName, file("."))
     routesImport ++= Seq("uk.gov.hmrc.currencyconversion.binders.DateBinder._", "java.time._")
   )
   .settings(majorVersion := 1)
-  .settings(
-    resolvers += Resolver.jcenterRepo
-  )
+  .settings(resolvers += Resolver.jcenterRepo)
+  .settings(resolvers += Resolver.typesafeRepo("releases"))
   .settings(
     ScoverageKeys.coverageExcludedFiles := "<empty>;Reverse.*;.*Routes.*;",
     ScoverageKeys.coverageMinimum := 80

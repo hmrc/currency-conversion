@@ -17,7 +17,6 @@
 package uk.gov.hmrc.currencyconversion.controllers
 
 
-import org.mockito.Matchers.{any, anyObject}
 import org.mockito.Mockito
 import org.mockito.Mockito.doReturn
 import org.scalatest.BeforeAndAfterEach
@@ -29,15 +28,18 @@ import play.api.libs.json.{JsArray, JsObject, Json}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.currencyconversion.repositories.ExchangeRateRepository
-import uk.gov.hmrc.play.test.UnitSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.Application
 import uk.gov.hmrc.currencyconversion.models.ExchangeRateObject
-
 import java.time.LocalDate
+
 import scala.concurrent.Future._
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
 import scala.language.postfixOps
 
-class ExchangeRateControllerSpec extends UnitSpec with GuiceOneAppPerSuite with MockitoSugar with BeforeAndAfterEach {
+class ExchangeRateControllerSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with MockitoSugar with BeforeAndAfterEach  {
 
   private lazy val exchangeRateRepository = mock[ExchangeRateRepository]
 
@@ -91,7 +93,9 @@ class ExchangeRateControllerSpec extends UnitSpec with GuiceOneAppPerSuite with 
 
       status(result) shouldBe Status.OK
 
-      result.header.headers.get("Warning") shouldBe None
+      val response = Await.result(result,1 seconds)
+
+      response.header.headers.get("Warning") shouldBe None
 
       contentAsJson(result) shouldBe Json.arr(
         Json.obj("startDate" -> "2019-09-01", "endDate" -> "2019-09-30", "currencyCode" -> "USD", "rate" -> "1.213")
@@ -104,7 +108,9 @@ class ExchangeRateControllerSpec extends UnitSpec with GuiceOneAppPerSuite with 
 
       status(result) shouldBe Status.OK
 
-      result.header.headers.get("Warning") shouldBe None
+      val response = Await.result(result,1 seconds)
+
+      response.header.headers.get("Warning") shouldBe None
 
       contentAsJson(result) shouldBe Json.arr(
         Json.obj("startDate" -> "2019-09-01", "endDate" -> "2019-09-30", "currencyCode" -> "INR", "rate" -> "1.00")
@@ -123,7 +129,9 @@ class ExchangeRateControllerSpec extends UnitSpec with GuiceOneAppPerSuite with 
 
       status(result) shouldBe Status.OK
 
-      result.header.headers.get("Warning") shouldBe None
+      val response = Await.result(result,1 seconds)
+
+      response.header.headers.get("Warning") shouldBe None
 
       contentAsJson(result) shouldBe Json.arr(
         Json.obj("startDate" -> "2019-09-01", "endDate" -> "2019-09-30", "currencyCode" -> "INVALID")
@@ -139,7 +147,9 @@ class ExchangeRateControllerSpec extends UnitSpec with GuiceOneAppPerSuite with 
 
         status(result) shouldBe Status.OK
 
-        result.header.headers.get("Warning") shouldBe None
+        val response = Await.result(result,1 seconds)
+
+        response.header.headers.get("Warning") shouldBe None
 
         contentAsJson(result).as[JsArray].value(0).as[JsObject].keys shouldBe Set("startDate", "endDate", "currencyCode", "rate")
         contentAsJson(result).as[JsArray].value(1).as[JsObject].keys shouldBe Set("startDate", "endDate", "currencyCode")
@@ -206,7 +216,7 @@ class ExchangeRateControllerSpec extends UnitSpec with GuiceOneAppPerSuite with 
 
          status(result) shouldBe Status.BAD_REQUEST
 
-         contentAsJson(result) shouldBe Json.obj("statusCode" -> 400, "message" -> "bad request")
+         contentAsJson(result) shouldBe Json.obj("statusCode" -> 400, "message" -> "bad request, cause: REDACTED")
 
        }
      }

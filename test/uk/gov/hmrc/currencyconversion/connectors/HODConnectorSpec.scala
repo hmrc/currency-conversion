@@ -20,15 +20,17 @@ import com.github.tomakehurst.wiremock.client.MappingBuilder
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.http.Fault
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.{FreeSpec, MustMatchers}
+import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.test.Helpers._
 import play.api.test.Injecting
 import uk.gov.hmrc.currencyconversion.utils.WireMockHelper
+import play.api.test.Helpers._
 
-class HODConnectorSpec extends FreeSpec with MustMatchers with GuiceOneAppPerSuite with WireMockHelper
+class HODConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with WireMockHelper
   with ScalaFutures with IntegrationPatience with Injecting {
 
   override lazy val app: Application = {
@@ -47,7 +49,7 @@ class HODConnectorSpec extends FreeSpec with MustMatchers with GuiceOneAppPerSui
   private lazy val connector: HODConnector = inject[HODConnector]
 
 
-  "hod connector" - {
+  "hod connector" should {
 
     "must call the HOD when xrs worker thread is started" in {
 

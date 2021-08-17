@@ -19,7 +19,8 @@ package uk.gov.hmrc.currencyconversion.workers
 import akka.stream.scaladsl.{Keep, Sink, SinkQueueWithCancel, Source}
 import akka.stream.{ActorAttributes, Materializer, Supervision}
 import com.google.inject.{Inject, Singleton}
-import play.api.{Configuration, Logger}
+import play.api.Configuration
+import play.api.i18n.Lang.logger.logger
 import uk.gov.hmrc.currencyconversion.connectors.HODConnector
 import uk.gov.hmrc.currencyconversion.repositories.ExchangeRateRepository
 import uk.gov.hmrc.http.HttpReads.{is2xx, is4xx}
@@ -66,9 +67,9 @@ class XrsExchangeRateRequestWorker @Inject()(
             writeExchangeRateRepository.insertOrUpdate(exchangeRatesJson)
             Future.successful(response)
           case response: HttpResponse if is4xx(response.status) =>
-            Logger.error(s"XRS_BAD_REQUEST_FROM_EIS_ERROR  [XrsExchangeRateRequestWorker] call to DES (EIS) is failed. ${response.toString}")
+            logger.error(s"XRS_BAD_REQUEST_FROM_EIS_ERROR  [XrsExchangeRateRequestWorker] call to DES (EIS) is failed. ${response.toString}")
             Future.successful(response)
-          case _ => Logger.error(s"XRS_BAD_REQUEST_FROM_EIS_ERROR [XrsExchangeRateRequestWorker] BAD Request is received from DES (EIS)")
+          case _ => logger.error(s"XRS_BAD_REQUEST_FROM_EIS_ERROR [XrsExchangeRateRequestWorker] BAD Request is received from DES (EIS)")
             Future.successful(HttpResponse(SERVICE_UNAVAILABLE, "Service Unavailable"))
         }
       }

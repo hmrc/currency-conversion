@@ -18,9 +18,10 @@ package uk.gov.hmrc.currencyconversion.binders
 
 import java.time.LocalDate
 
-import uk.gov.hmrc.play.test.UnitSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
-class BinderSpec extends UnitSpec{
+class BinderSpec extends AnyWordSpecLike with Matchers {
 
   "Calling bindableDate.bind" should {
 
