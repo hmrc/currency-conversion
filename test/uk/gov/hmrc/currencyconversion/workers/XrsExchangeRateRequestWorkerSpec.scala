@@ -19,13 +19,16 @@ package uk.gov.hmrc.currencyconversion.workers
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
-import org.scalatest.{FreeSpec, MustMatchers, OptionValues}
+import org.scalatest.OptionValues
+import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import uk.gov.hmrc.currencyconversion.utils.WireMockHelper
 
-class XrsExchangeRateRequestWorkerSpec extends FreeSpec with MustMatchers
+class XrsExchangeRateRequestWorkerSpec extends AnyWordSpecLike with Matchers
   with ScalaFutures with IntegrationPatience with OptionValues with MockitoSugar with WireMockHelper with Eventually {
 
   lazy val builder: GuiceApplicationBuilder = new GuiceApplicationBuilder()

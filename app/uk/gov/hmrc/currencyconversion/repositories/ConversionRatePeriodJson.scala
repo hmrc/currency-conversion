@@ -21,7 +21,7 @@ import play.api.libs.json.JsSuccess
 import uk.gov.hmrc.currencyconversion.models.{ConversionRatePeriod, Currency, CurrencyPeriod, ExchangeRateData}
 
 import java.time.LocalDate
-import play.api.Logger
+import play.api.i18n.Lang.logger.logger
 import javax.inject.Inject
 import play.api.libs.json.OFormat.oFormatFromReadsAndOWrites
 
@@ -40,7 +40,7 @@ class ConversionRatePeriodJson @Inject()(writeExchangeRateRepository: ExchangeRa
     if (!writeExchangeRateRepository.isDataPresent(targetFileName)) {
       targetFileName
     } else {
-      Logger.info(s"$targetFileName is not present")
+      logger.info(s"$targetFileName is not present")
       "empty"
     }
   }
@@ -49,14 +49,14 @@ class ConversionRatePeriodJson @Inject()(writeExchangeRateRepository: ExchangeRa
     writeExchangeRateRepository.get(filePath)
       .map {
         case response if response.isEmpty =>
-          Logger.error(s"XRS_FILE_CANNOT_BE_READ_ERROR [ConversionRatePeriodJson] Exchange rate file is not able to read")
+          logger.error(s"XRS_FILE_CANNOT_BE_READ_ERROR [ConversionRatePeriodJson] Exchange rate file is not able to read")
           throw new RuntimeException("Exchange rate data is not able to read.")
         case  response =>
           response.get.exchangeRateData.validate[ExchangeRateData] match {
             case JsSuccess(seq, _) =>
               seq
             case _ => {
-              Logger.error(s"XRS_FILE_CANNOT_BE_READ_ERROR [ConversionRatePeriodJson] Exchange rate data mapping is failed")
+              logger.error(s"XRS_FILE_CANNOT_BE_READ_ERROR [ConversionRatePeriodJson] Exchange rate data mapping is failed")
               throw new RuntimeException("Exchange rate data mapping is failed")
           }
         }
@@ -103,7 +103,7 @@ class ConversionRatePeriodJson @Inject()(writeExchangeRateRepository: ExchangeRa
   def getLatestConversionRatePeriod(date: LocalDate): ConversionRatePeriod = {
     val fileName = getExchangeRateFileName(date)
     if (fileName.equals("empty")) {
-      Logger.error(s"XRS_FILE_NOT_AVAILABLE_ERROR [ConversionRatePeriodJson] Exchange rate file is not available.")
+      logger.error(s"XRS_FILE_NOT_AVAILABLE_ERROR [ConversionRatePeriodJson] Exchange rate file is not available.")
       throw new RuntimeException("Exchange rate file is not able to read.")
     } else {
       val rates : Map[String, Option[BigDecimal]] = getExchangeRates(fileName)

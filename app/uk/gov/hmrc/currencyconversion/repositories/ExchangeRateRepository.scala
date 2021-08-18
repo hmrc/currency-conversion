@@ -21,7 +21,7 @@ import reactivemongo.api.WriteConcern
 import uk.gov.hmrc.currencyconversion.models.ExchangeRateObject
 import akka.stream.Materializer
 import com.google.inject.{Inject, Singleton}
-import play.api.Logger
+import play.api.i18n.Lang.logger.logger
 import play.api.libs.json.{JsObject, Json}
 import play.modules.reactivemongo.ReactiveMongoApi
 import reactivemongo.api.indexes.{Index, IndexType}
@@ -72,9 +72,9 @@ class DefaultExchangeRateRepository @Inject() (
     val data = ExchangeRateObject(currentFileName, exchangeRateData)
     collection.flatMap(_.insert(ordered = true, WriteConcern.Journaled).one(data)).map {
       case wr: reactivemongo.api.commands.WriteResult if wr.writeErrors.isEmpty =>
-        Logger.info(s"[ExchangeRateRepository] writing to mongo is successful $currentFileName")
+        logger.info(s"[ExchangeRateRepository] writing to mongo is successful $currentFileName")
         wr
-      case e => Logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_ERROR [ExchangeRateRepository] " +
+      case e => logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_ERROR [ExchangeRateRepository] " +
         s"writing to mongo is failed $e")
         throw new Exception(s"unable to insert exchangeRateRepository $e")
     }
@@ -89,9 +89,9 @@ class DefaultExchangeRateRepository @Inject() (
         fields = None, bypassDocumentValidation = false, writeConcern = WriteConcern.Acknowledged,
         maxTime = None, None, Nil) map {
         _.result[ExchangeRateObject] match {
-          case success if success.isDefined => Logger.info(s"[ExchangeRateRepository] updating to mongo is successful $currentFileName")
+          case success if success.isDefined => logger.info(s"[ExchangeRateRepository] updating to mongo is successful $currentFileName")
             success
-          case _ => Logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_ERROR [ExchangeRateRepository] updating to mongo is failed")
+          case _ => logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_ERROR [ExchangeRateRepository] updating to mongo is failed")
             throw new Exception(s"unable to update exchangeRateRepository")
         }
       }
@@ -109,9 +109,9 @@ class DefaultExchangeRateRepository @Inject() (
       _.findAndRemove(selector = selector, sort = None, fields = None, writeConcern = WriteConcern.Acknowledged,
         maxTime = None, None, Nil).map {
         _.result[ExchangeRateObject] match {
-          case success if success.isDefined => Logger.info(s"[ExchangeRateRepository] deleting older data from mongo is successful $oldFileName")
+          case success if success.isDefined => logger.info(s"[ExchangeRateRepository] deleting older data from mongo is successful $oldFileName")
             success
-          case _ => Logger.info(s"[ExchangeRateRepository] no older data is available")
+          case _ => logger.info(s"[ExchangeRateRepository] no older data is available")
             Future.successful(None)
         }
       }
