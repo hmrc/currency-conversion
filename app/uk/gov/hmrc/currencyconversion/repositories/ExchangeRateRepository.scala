@@ -17,16 +17,15 @@
 package uk.gov.hmrc.currencyconversion.repositories
 
 import java.time.LocalDate
-import reactivemongo.api.WriteConcern
 import uk.gov.hmrc.currencyconversion.models.ExchangeRateObject
 import akka.stream.Materializer
 import com.google.inject.{Inject, Singleton}
+import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.{FindOneAndUpdateOptions, ReturnDocument, Updates}
 import play.api.i18n.Lang.logger.logger
-import play.api.libs.json.{JsObject, Json}
-import play.modules.reactivemongo.ReactiveMongoApi
-import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.play.json.ImplicitBSONHandlers.JsObjectDocumentWriter
-import reactivemongo.play.json.collection.JSONCollection
+import play.api.libs.json.JsObject
+import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -34,33 +33,23 @@ import scala.language.{implicitConversions, postfixOps}
 
 @Singleton
 class DefaultExchangeRateRepository @Inject() (
-  mongo: ReactiveMongoApi,
-  ) (implicit ec: ExecutionContext, m: Materializer) extends ExchangeRateRepository {
+                                                mongoComponent: MongoComponent,
+  ) (implicit ec: ExecutionContext, m: Materializer) extends PlayMongoRepository[ExchangeRateObject](
+  collectionName = "exchangeCurrencyData",
+  mongoComponent = mongoComponent,
+  domainFormat   = ExchangeRateObject.format,
+  indexes = Seq())
+  with ExchangeRateRepository {
 
-  private val collectionName: String = "exchangeCurrencyData"
 
   private def date = LocalDate.now()
   private def currentFileName: String = "exrates-monthly-%02d".format(date.getMonthValue) +
     date.getYear.toString.substring(2)
 
-  private def collection: Future[JSONCollection] =
-    mongo.database.map(_.collection[JSONCollection](collectionName))
-
-  private val idIndex = Index(
-    key     = Seq("_id" -> IndexType.Ascending),
-    unique = true
-  )
-
-  val started: Future[Unit] =
-    collection.flatMap {
-      coll =>
-        for {
-          _ <- coll.indexesManager.ensure(idIndex)
-        } yield ()
-    }
 
   def get(fileName: String): Future[Option[ExchangeRateObject]] =
-    collection.flatMap(_.find(Json.obj("_id" -> fileName), None).one[ExchangeRateObject])
+    collection.find(equal("_id" , Codecs.toBson(fileName))).headOption()
+
 
   def isDataPresent(fileName: String): Boolean = {
     val existingData = get(fileName)
@@ -68,53 +57,41 @@ class DefaultExchangeRateRepository @Inject() (
     existingData.value.get.get.isEmpty
   }
 
-  def insert(exchangeRateData: JsObject): Future[Any] = {
+  def insert(exchangeRateData: JsObject): Future[Unit] = {
     val data = ExchangeRateObject(currentFileName, exchangeRateData)
-    collection.flatMap(_.insert(ordered = true, WriteConcern.Journaled).one(data)).map {
-      case wr: reactivemongo.api.commands.WriteResult if wr.writeErrors.isEmpty =>
-        logger.info(s"[ExchangeRateRepository] writing to mongo is successful $currentFileName")
-        wr
-      case e => logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_ERROR [ExchangeRateRepository] " +
-        s"writing to mongo is failed $e")
-        throw new Exception(s"unable to insert exchangeRateRepository $e")
+
+    collection.insertOne(data).toFuture() map { result =>
+      logger.info(s"[ExchangeRateRepository] writing to mongo is successful $currentFileName")
+    } recover {
+      logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_ERROR [ExchangeRateRepository] " + s"writing to mongo is failed ")
+      throw new Exception(s"unable to insert exchangeRateRepository")
     }
   }
 
-  def update(exchangeRateData: JsObject): Future[Option[ExchangeRateObject]] = {
-    val data = ExchangeRateObject(currentFileName, exchangeRateData)
-    val selector = Json.obj("_id" -> data.fileName)
+  def update(exchangeRateData: JsObject): Future[ExchangeRateObject] = {
 
-    collection.flatMap {
-      _.findAndUpdate(selector = selector, update = data, fetchNewObject = true, upsert = false, sort = None,
-        fields = None, bypassDocumentValidation = false, writeConcern = WriteConcern.Acknowledged,
-        maxTime = None, None, Nil) map {
-        _.result[ExchangeRateObject] match {
-          case success if success.isDefined => logger.info(s"[ExchangeRateRepository] updating to mongo is successful $currentFileName")
-            success
-          case _ => logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_ERROR [ExchangeRateRepository] updating to mongo is failed")
-            throw new Exception(s"unable to update exchangeRateRepository")
-        }
-      }
+    val data = ExchangeRateObject(currentFileName, exchangeRateData)
+
+    collection.findOneAndUpdate(equal("_id", Codecs.toBson(data.fileName)),
+      Updates.set("exchangeRateData",Codecs.toBson(data)),
+      options = FindOneAndUpdateOptions().upsert(false).returnDocument(ReturnDocument.AFTER)).toFuture() map   { result =>
+      logger.info(s"[ExchangeRateRepository] writing to mongo is successful $currentFileName")
+        result
+    } recover {
+      logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_ERROR [ExchangeRateRepository] " + s"writing to mongo is failed")
+      throw new Exception(s"unable to insert exchangeRateRepository ")
     }
   }
 
 
-  private def deleteOlderExchangeData():Future[Any] = {
+  private def deleteOlderExchangeData() = {
     val sixMonthOldDate = LocalDate.now.minusMonths(6.toInt)
     val oldFileName = "exrates-monthly-%02d".format(sixMonthOldDate.getMonthValue) +
       sixMonthOldDate.getYear.toString.substring(2)
 
-    val selector = Json.obj("_id" -> oldFileName)
-    collection.flatMap {
-      _.findAndRemove(selector = selector, sort = None, fields = None, writeConcern = WriteConcern.Acknowledged,
-        maxTime = None, None, Nil).map {
-        _.result[ExchangeRateObject] match {
-          case success if success.isDefined => logger.info(s"[ExchangeRateRepository] deleting older data from mongo is successful $oldFileName")
-            success
-          case _ => logger.info(s"[ExchangeRateRepository] no older data is available")
-            Future.successful(None)
-        }
-      }
+    collection.findOneAndDelete(equal("_id", oldFileName)).toFuture() map {
+      case result => logger.info(s"[ExchangeRateRepository] deleting older data from mongo is successful $oldFileName")
+      case _ => logger.info(s"[ExchangeRateRepository] no older data is available")
     }
   }
 
@@ -126,13 +103,13 @@ class DefaultExchangeRateRepository @Inject() (
         Future.successful(None)
     }
     deleteOlderExchangeData()
+    Future.successful(None)
   }
 }
 
 trait ExchangeRateRepository {
-  val started: Future[Unit]
-  def insert(data: JsObject): Future[Any]
-  def update(data: JsObject): Future[Option[ExchangeRateObject]]
+  def insert(data: JsObject): Future[Unit]
+  def update(data: JsObject): Future[ExchangeRateObject]
   def get(fileName: String): Future[Option[ExchangeRateObject]]
   def insertOrUpdate(data: JsObject):Future[Any]
   def isDataPresent(fileName: String): Boolean
