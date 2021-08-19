@@ -70,10 +70,9 @@ class DefaultExchangeRateRepository @Inject() (
 
   def update(exchangeRateData: JsObject): Future[ExchangeRateObject] = {
 
-    val data = ExchangeRateObject(currentFileName, exchangeRateData)
 
-    collection.findOneAndUpdate(equal("_id", Codecs.toBson(data.fileName)),
-      Updates.set("exchangeRateData",Codecs.toBson(data)),
+    collection.findOneAndUpdate(equal("_id", Codecs.toBson(currentFileName)),
+      Updates.set("exchangeRateData",Codecs.toBson(exchangeRateData)),
       options = FindOneAndUpdateOptions().upsert(false).returnDocument(ReturnDocument.AFTER)).toFuture() map   { result =>
       logger.info(s"[ExchangeRateRepository] writing to mongo is successful $currentFileName")
         result
