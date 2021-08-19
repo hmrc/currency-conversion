@@ -8,8 +8,8 @@ object AppDependencies {
   val compile = Seq(
     ws,
     "uk.gov.hmrc" %% "bootstrap-backend-play-28" % "5.11.0",
-    "org.reactivemongo"          %% "play2-reactivemongo"      % "0.18.8-play26",
-    "org.reactivemongo"          %% "reactivemongo-akkastream" % "0.20.3"
+    "uk.gov.hmrc.mongo"          %% "hmrc-mongo-play-28"         % "0.52.0",
+    "org.reactivemongo" %% "reactivemongo-akkastream" % "0.20.13"
   )
 
   def test(scope: String = "test,it") = Seq(

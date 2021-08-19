@@ -57,6 +57,8 @@ class XrsExchangeRateRequestWorker @Inject()(
       case _           => Supervision.stop
     }
 
+
+
   val tap: SinkQueueWithCancel[HttpResponse] = {
     Source.tick(initialDelay, interval, Tick())
       .mapAsync(allCatch.opt(parallelism.toInt).getOrElse(1))

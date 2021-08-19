@@ -17,9 +17,12 @@
 package uk.gov.hmrc.currencyconversion.controllers
 
 
+
+import com.codahale.metrics.SharedMetricRegistries
 import org.mockito.Mockito
 import org.mockito.Mockito.doReturn
 import org.scalatest.BeforeAndAfterEach
+import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.http.Status
@@ -28,18 +31,18 @@ import play.api.libs.json.{JsArray, JsObject, Json}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.currencyconversion.repositories.ExchangeRateRepository
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.Application
 import uk.gov.hmrc.currencyconversion.models.ExchangeRateObject
+
 import java.time.LocalDate
-
 import scala.concurrent.Future._
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
 import scala.language.postfixOps
+import org.scalatest.wordspec.AnyWordSpecLike
+import play.api.mvc.Result
 
-class ExchangeRateControllerSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with MockitoSugar with BeforeAndAfterEach  {
+import scala.concurrent.Future
+
+class ExchangeRateControllerSpec extends AnyWordSpecLike with GuiceOneAppPerSuite with MockitoSugar with BeforeAndAfterEach {
 
   private lazy val exchangeRateRepository = mock[ExchangeRateRepository]
 
@@ -48,6 +51,8 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with Matchers with Guic
     val exchangeRate : ExchangeRateObject = ExchangeRateObject("exrates-monthly-0919", Json.parse(data).as[JsObject])
     doReturn(false) when exchangeRateRepository isDataPresent "exrates-monthly-0919"
     doReturn(successful(Some(exchangeRate))) when exchangeRateRepository get "exrates-monthly-0919"
+
+    SharedMetricRegistries.clear()
   }
 
   override lazy val app: Application = {
@@ -63,6 +68,7 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with Matchers with Guic
 
   val data: String =
     """{
+      |"exchangeRateData" : {
       |        "timestamp" : "2019-06-28T13:17:21Z",
       |        "correlationid" : "c4a81105-9417-4080-9cd2-c4469efc965c",
       |        "exchangeRates" : [
@@ -81,38 +87,37 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with Matchers with Guic
       |                "currencyName" : "India"
       |            }
       |        ]
+      |        }
       |}""".stripMargin
 
 
 
-  "Getting rates for a valid date and 1 valid currency" should {
+  "Getting rates for a valid date and 1 valid currency" must {
 
     "return 200 and the correct json" in {
 
-      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-10?cc=USD")).get
+      val result = await(route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-10?cc=USD")).get)
 
-      status(result) shouldBe Status.OK
+      result.header.status shouldBe OK
 
-      val response = Await.result(result,1 seconds)
 
-      response.header.headers.get("Warning") shouldBe None
+      result.header.headers.get("Warning") shouldBe None
 
-      contentAsJson(result) shouldBe Json.arr(
+      contentAsJson(Future.successful(result)) shouldBe Json.arr(
         Json.obj("startDate" -> "2019-09-01", "endDate" -> "2019-09-30", "currencyCode" -> "USD", "rate" -> "1.213")
       )
       Thread.sleep(2000.toLong)
     }
     "return 200 and the correct json with scaling 2 decimal at least" in {
 
-      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-10?cc=INR")).get
+      val result: Result = await(route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-10?cc=INR")).get)
 
-      status(result) shouldBe Status.OK
+      result.header.status shouldBe OK
 
-      val response = Await.result(result,1 seconds)
 
-      response.header.headers.get("Warning") shouldBe None
+      result.header.headers.get("Warning") shouldBe None
 
-      contentAsJson(result) shouldBe Json.arr(
+      contentAsJson(Future.successful(result)) shouldBe Json.arr(
         Json.obj("startDate" -> "2019-09-01", "endDate" -> "2019-09-30", "currencyCode" -> "INR", "rate" -> "1.00")
       )
       Thread.sleep(2000.toLong)
@@ -120,45 +125,41 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with Matchers with Guic
   }
 
 
-  "Getting rates for a valid date and 1 invalid currency" should {
+  "Getting rates for a valid date and 1 invalid currency" must  {
 
     "return 200 and the correct json" in {
 
-      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-10?cc=INVALID")).get
+      val result = await(route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-10?cc=INVALID")).get)
 
 
-      status(result) shouldBe Status.OK
+      result.header.status shouldBe OK
 
-      val response = Await.result(result,1 seconds)
+      result.header.headers.get("Warning") shouldBe None
 
-      response.header.headers.get("Warning") shouldBe None
-
-      contentAsJson(result) shouldBe Json.arr(
+      contentAsJson(Future.successful(result)) shouldBe Json.arr(
         Json.obj("startDate" -> "2019-09-01", "endDate" -> "2019-09-30", "currencyCode" -> "INVALID")
       )
     }
   }
 
-    "Getting rates for a valid date and 1 valid currency and 1 invalid currency" should {
+    "Getting rates for a valid date and 1 valid currency and 1 invalid currency" must {
 
       "return 200 and the correct json" in {
 
-        val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-10?cc=USD&cc=INVALID")).get
+        val result = await(route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-10?cc=USD&cc=INVALID")).get)
 
-        status(result) shouldBe Status.OK
+        result.header.status shouldBe OK
 
-        val response = Await.result(result,1 seconds)
+        result.header.headers.get("Warning") shouldBe None
 
-        response.header.headers.get("Warning") shouldBe None
-
-        contentAsJson(result).as[JsArray].value(0).as[JsObject].keys shouldBe Set("startDate", "endDate", "currencyCode", "rate")
-        contentAsJson(result).as[JsArray].value(1).as[JsObject].keys shouldBe Set("startDate", "endDate", "currencyCode")
+        contentAsJson(Future.successful(result)).as[JsArray].value(0).as[JsObject].keys shouldBe Set("startDate", "endDate", "currencyCode", "rate")
+        contentAsJson(Future.successful(result)).as[JsArray].value(1).as[JsObject].keys shouldBe Set("startDate", "endDate", "currencyCode")
 
       }
     }
 
 
-     "Getting rates for a date which has no rates Json file and a valid currency code" should {
+     "Getting rates for a date which has no rates Json file and a valid currency code" must {
 
        "return 200 and the correct json" in {
          doReturn(true) when exchangeRateRepository isDataPresent "exrates-monthly-1019"
@@ -171,7 +172,7 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with Matchers with Guic
        }
      }
 
-     "Getting rates for a date which has no rates Json file, 1 valid currency code and 1 invalid currency code" should {
+     "Getting rates for a date which has no rates Json file, 1 valid currency code and 1 invalid currency code" must {
        "return response from previous month" in {
          doReturn(true) when exchangeRateRepository isDataPresent "exrates-monthly-1019"
          val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-10-10?cc=USD&cc=INVALID")).get
@@ -180,7 +181,7 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with Matchers with Guic
        }
      }
 
-     "Getting rates for last day of the month and 1 valid currency code" should {
+     "Getting rates for last day of the month and 1 valid currency code" must {
 
        "return 200 and the correct json which gets rate from file of the same month" in {
 
@@ -194,7 +195,7 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with Matchers with Guic
        }
      }
 
-     "Getting rates for first day of the month and 1 valid currency code" should {
+     "Getting rates for first day of the month and 1 valid currency code" must {
 
        "return 200 and the correct json which gets rate from file of the same month" in {
 
@@ -208,7 +209,7 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with Matchers with Guic
        }
      }
 
-     "Getting rates for an invalid date" should {
+     "Getting rates for an invalid date" must {
 
        "return 400 and the correct json" in {
 
@@ -221,7 +222,7 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with Matchers with Guic
        }
      }
 
-     "Getting currencies for a valid date" should {
+     "Getting currencies for a valid date" must {
 
        "return 200 and the correct json" in {
 
@@ -237,7 +238,7 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with Matchers with Guic
        }
      }
 
-     "Getting currencies for an invalid date" should {
+     "Getting currencies for an invalid date" must {
 
        "return 400" in {
 
@@ -247,7 +248,7 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with Matchers with Guic
        }
      }
 
-     "Getting currencies for a date which does not exist" should {
+     "Getting currencies for a date which does not exist" must {
 
        "return 200 if fallback is available" in {
 

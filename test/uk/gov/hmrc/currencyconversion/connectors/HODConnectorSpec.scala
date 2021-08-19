@@ -16,22 +16,28 @@
 
 package uk.gov.hmrc.currencyconversion.connectors
 
+import com.codahale.metrics.SharedMetricRegistries
 import com.github.tomakehurst.wiremock.client.MappingBuilder
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.http.Fault
+import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
-import org.scalatest.wordspec.AnyWordSpecLike
-import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.test.Injecting
-import uk.gov.hmrc.currencyconversion.utils.WireMockHelper
 import play.api.test.Helpers._
+import play.api.test.Injecting
+import uk.gov.hmrc.http.HeaderCarrier
+import org.scalatest.matchers.must.Matchers
+import org.scalatest.freespec.AnyFreeSpec
+import uk.gov.hmrc.currencyconversion.utils.WireMockHelper
 
-class HODConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with WireMockHelper
-  with ScalaFutures with IntegrationPatience with Injecting {
+class HODConnectorSpec extends AnyFreeSpec with Matchers with GuiceOneAppPerSuite with WireMockHelper
+with ScalaFutures with IntegrationPatience with Injecting with BeforeAndAfterEach {
+
+  override def beforeEach(): Unit = {
+    SharedMetricRegistries.clear()
+  }
 
   override lazy val app: Application = {
     new GuiceApplicationBuilder()
@@ -43,15 +49,18 @@ class HODConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       .build()
   }
 
+  private lazy val connector: HODConnector = inject[HODConnector]
+
+  private implicit val hc: HeaderCarrier = HeaderCarrier()
+
   private def stubCall: MappingBuilder =
     post(urlEqualTo("/passengers/exchangerequest/xrs/getexchangerate/v1"))
 
-  private lazy val connector: HODConnector = inject[HODConnector]
 
-
-  "hod connector" should {
+  "hod connector" - {
 
     "must call the HOD when xrs worker thread is started" in {
+
 
       server.stubFor(
         stubCall
@@ -71,7 +80,6 @@ class HODConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
     }
 
     "must fail fast while the circuit breaker is open when Xrs call is triggered" in {
-
       server.stubFor(
         stubCall
           .willReturn(aResponse().withFault(Fault.RANDOM_DATA_THEN_CLOSE))

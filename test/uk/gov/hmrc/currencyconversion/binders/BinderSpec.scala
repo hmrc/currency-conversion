@@ -16,12 +16,19 @@
 
 package uk.gov.hmrc.currencyconversion.binders
 
+import com.codahale.metrics.SharedMetricRegistries
+import org.scalatest.{BeforeAndAfterEach, TestSuite}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+
 import java.time.LocalDate
 
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
 
-class BinderSpec extends AnyWordSpecLike with Matchers {
+class BinderSpec extends AnyWordSpec with Matchers with TestSuite with BeforeAndAfterEach {
+
+  override def beforeEach(): Unit = {
+    SharedMetricRegistries.clear()
+  }
 
   "Calling bindableDate.bind" should {
 

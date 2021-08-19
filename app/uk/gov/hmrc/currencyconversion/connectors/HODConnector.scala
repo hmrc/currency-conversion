@@ -23,7 +23,7 @@ import play.api.http.{ContentTypes, HeaderNames}
 import play.api.Configuration
 import play.api.http.Status.SERVICE_UNAVAILABLE
 import play.api.libs.json.{JsValue, Json}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse,HttpClient}
 import uk.gov.hmrc.currencyconversion.models.Service
 
 import java.util.UUID
