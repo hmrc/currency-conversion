@@ -68,7 +68,6 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with GuiceOneAppPerSuit
 
   val data: String =
     """{
-      |"exchangeRateData" : {
       |        "timestamp" : "2019-06-28T13:17:21Z",
       |        "correlationid" : "c4a81105-9417-4080-9cd2-c4469efc965c",
       |        "exchangeRates" : [
@@ -87,7 +86,6 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with GuiceOneAppPerSuit
       |                "currencyName" : "India"
       |            }
       |        ]
-      |        }
       |}""".stripMargin
 
 
