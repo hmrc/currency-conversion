@@ -52,7 +52,7 @@ class ConversionRatePeriodJson @Inject()(writeExchangeRateRepository: ExchangeRa
           logger.error(s"XRS_FILE_CANNOT_BE_READ_ERROR [ConversionRatePeriodJson] Exchange rate file is not able to read")
           throw new RuntimeException("Exchange rate data is not able to read.")
         case  response =>
-          response.get.exchangeRateData.value("exchangeRateData").validate[ExchangeRateData] match {
+          response.get.exchangeRateData.validate[ExchangeRateData] match {
             case JsSuccess(seq, _) =>
               seq
             case _ => {
