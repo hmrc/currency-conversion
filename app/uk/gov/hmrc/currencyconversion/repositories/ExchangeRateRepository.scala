@@ -30,6 +30,7 @@ import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.{implicitConversions, postfixOps}
+import scala.util.Try
 
 @Singleton
 class DefaultExchangeRateRepository @Inject() (
@@ -57,29 +58,33 @@ class DefaultExchangeRateRepository @Inject() (
     existingData.value.get.get.isEmpty
   }
 
-  def insert(exchangeRateData: JsObject): Future[Unit] = {
-    val data = ExchangeRateObject(currentFileName, exchangeRateData)
-
-    collection.insertOne(data).toFuture() map { result =>
-      logger.info(s"[ExchangeRateRepository] writing to mongo is successful $currentFileName")
-    } recover {
-      logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_ERROR [ExchangeRateRepository] " + s"writing to mongo is failed ")
-      throw new Exception(s"unable to insert exchangeRateRepository")
-    }
+  def insert(exchangeRateData: JsObject): Unit = {
+    Try(
+      {
+        val data = ExchangeRateObject(currentFileName, exchangeRateData)
+        collection.insertOne(data).toFuture()
+        logger.info(s"[ExchangeRateRepository] writing to mongo is successful $currentFileName")
+      }
+    ).getOrElse(
+      {
+        logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_ERROR [ExchangeRateRepository] " + s"writing to mongo is failed ")
+        throw new Exception(s"unable to insert exchangeRateRepository")
+      }
+    )
   }
 
-  def update(exchangeRateData: JsObject): Future[ExchangeRateObject] = {
+  def update(exchangeRateData: JsObject): Unit = {
 
-
-    collection.findOneAndUpdate(equal("_id", Codecs.toBson(currentFileName)),
-      Updates.set("exchangeRateData",Codecs.toBson(exchangeRateData)),
-      options = FindOneAndUpdateOptions().upsert(false).returnDocument(ReturnDocument.AFTER)).toFuture() map   { result =>
-      logger.info(s"[ExchangeRateRepository] writing to mongo is successful $currentFileName")
-        result
-    } recover {
-      logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_ERROR [ExchangeRateRepository] " + s"writing to mongo is failed")
-      throw new Exception(s"unable to insert exchangeRateRepository ")
+    Try({
+      collection.findOneAndUpdate(equal("_id", Codecs.toBson(currentFileName)),
+        Updates.set("exchangeRateData",Codecs.toBson(exchangeRateData)),
+        options = FindOneAndUpdateOptions().upsert(false).returnDocument(ReturnDocument.AFTER)).toFuture()
+        logger.info(s"[ExchangeRateRepository] writing to mongo is successful $currentFileName")
     }
+    ).getOrElse(
+      {logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_ERROR [ExchangeRateRepository] " + s"writing to mongo is failed")
+        throw new Exception(s"unable to insert exchangeRateRepository ")}
+    )
   }
 
 
@@ -97,7 +102,7 @@ class DefaultExchangeRateRepository @Inject() (
   def insertOrUpdate(exchangeRateData: JsObject): Future[Any] = {
     get(currentFileName) map {
       case response if response.isEmpty => insert(exchangeRateData)
-        response
+        Future.successful(response)
       case _ => update(exchangeRateData)
         Future.successful(None)
     }
@@ -107,8 +112,8 @@ class DefaultExchangeRateRepository @Inject() (
 }
 
 trait ExchangeRateRepository {
-  def insert(data: JsObject): Future[Unit]
-  def update(data: JsObject): Future[ExchangeRateObject]
+  def insert(data: JsObject): Unit
+  def update(data: JsObject): Unit
   def get(fileName: String): Future[Option[ExchangeRateObject]]
   def insertOrUpdate(data: JsObject):Future[Any]
   def isDataPresent(fileName: String): Boolean
