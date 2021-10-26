@@ -18,9 +18,7 @@ package uk.gov.hmrc.currencyconversion.binders
 
 import java.time.LocalDate
 import java.time.format.{DateTimeFormatter, ResolverStyle}
-
 import play.api.mvc.PathBindable
-
 import scala.util.Try
 
 object DateBinder {

@@ -34,14 +34,16 @@ lazy val microservice = Project(appName, file("."))
   .settings(
     ScoverageKeys.coverageExcludedFiles := "<empty>;Reverse.*;.*Routes.*;",
     ScoverageKeys.coverageMinimum := 80
-  ).settings(silencerSettings)
+  )
+  .settings(silencerSettings)
+  .settings(PlayKeys.playDefaultPort := 9016)
 
 lazy val silencerSettings: Seq[Setting[_]] = {
 
   val paramValueNeverUsed: Regex = """^(parameter value)(.*)(is never used)$""".r
   val unusedImports: Regex = """^(Unused import*)$""".r
 
-  val silencerVersion = "1.7.0"
+  val silencerVersion = "1.7.1"
   Seq(
     libraryDependencies ++= Seq(
       compilerPlugin("com.github.ghik" % "silencer-plugin" % silencerVersion cross CrossVersion.full),

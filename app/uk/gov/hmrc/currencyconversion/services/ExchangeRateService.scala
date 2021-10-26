@@ -18,43 +18,48 @@ package uk.gov.hmrc.currencyconversion.services
 
 import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters.lastDayOfMonth
-
 import javax.inject.Inject
 import play.api.libs.json._
 import uk.gov.hmrc.currencyconversion.models._
 import uk.gov.hmrc.currencyconversion.repositories.ConversionRatePeriodRepository
 
-class ExchangeRateService @Inject()(exchangeRateRepository: ConversionRatePeriodRepository)  {
+  import scala.concurrent.{ExecutionContext, Future}
+
+class ExchangeRateService @Inject()(exchangeRateRepository: ConversionRatePeriodRepository)(implicit ec: ExecutionContext)  {
 
 
-  def getRates(date: LocalDate, currencyCodes: List[String]): List[ExchangeRateResult] = {
-
+  def getRates(date: LocalDate, currencyCodes: List[String]): Future[List[ExchangeRateResult]] = {
     val conversionRatePeriod = exchangeRateRepository.getConversionRatePeriod(date)
-
-    currencyCodes.map { currencyCode =>
-      conversionRatePeriod match {
-        case Some(crp) =>
-          crp.rates.get(currencyCode) match {
-            case Some(rate) => ExchangeRateSuccessResult(Json.obj("startDate" -> crp.startDate, "endDate" -> crp.endDate, "currencyCode" -> currencyCode, "rate" -> rate.map(_.toString())))
-            case None => ExchangeRateSuccessResult(Json.obj("startDate" -> crp.startDate, "endDate" -> crp.endDate, "currencyCode" -> currencyCode))
+    Future.sequence {
+        currencyCodes.map { currencyCode =>
+          conversionRatePeriod.flatMap {
+            case Some(crp) =>
+              crp.rates.get(currencyCode) match {
+                case Some(rate) => Future.successful(ExchangeRateSuccessResult(Json.obj("startDate" -> crp.startDate,
+                                                    "endDate" -> crp.endDate, "currencyCode" -> currencyCode, "rate" -> rate.map(_.toString()))))
+                case None => Future.successful(ExchangeRateSuccessResult(Json.obj("startDate" -> crp.startDate,
+                                                    "endDate" -> crp.endDate, "currencyCode" -> currencyCode)))
+              }
+            case None => exchangeRateRepository.getLatestConversionRatePeriod(date.minusMonths(1)).map { fallbackCrp =>
+              fallbackCrp.rates.get(currencyCode) match {
+                case Some(rate) => ExchangeRateOldFileResult(Json.obj("startDate" -> fallbackCrp.startDate,
+                                                    "endDate" -> fallbackCrp.endDate, "currencyCode" -> currencyCode, "rate" -> rate.map(_.toString())))
+                case None => ExchangeRateOldFileResult(Json.obj("startDate" -> fallbackCrp.startDate,
+                                                    "endDate" -> fallbackCrp.endDate, "currencyCode" -> currencyCode))
+              }
+            }
           }
-        case None =>
-          val fallbackCrp = exchangeRateRepository.getLatestConversionRatePeriod(date.minusMonths(1))
-          fallbackCrp.rates.get(currencyCode) match {
-            case Some(rate) => ExchangeRateOldFileResult(Json.obj("startDate" -> fallbackCrp.startDate, "endDate" -> fallbackCrp.endDate, "currencyCode" -> currencyCode, "rate" -> rate.map(_.toString())))
-            case None => ExchangeRateOldFileResult(Json.obj("startDate" -> fallbackCrp.startDate, "endDate" -> fallbackCrp.endDate, "currencyCode" -> currencyCode))
-          }
+        }
       }
+  }
+
+  def getCurrencies(date: LocalDate): Future[Option[CurrencyPeriod]] = {
+    exchangeRateRepository.getCurrencyPeriod(date).flatMap {
+        case Some(value) => Future.successful(Some(value))
+        case None =>
+        val fallbackDate = date.minusMonths(1).`with`(lastDayOfMonth()) //lastDay of previous month
+        exchangeRateRepository.getCurrencyPeriod(fallbackDate)
     }
   }
 
-  def getCurrencies(date: LocalDate): Option[CurrencyPeriod] = {
-
-    def fallbackPeriod() = {
-      val fallbackDate = date.minusMonths(1).`with`(lastDayOfMonth()) //lastDay of previous month
-      exchangeRateRepository.getCurrencyPeriod(fallbackDate)
-    }
-
-    exchangeRateRepository.getCurrencyPeriod(date).orElse(fallbackPeriod())
-  }
 }

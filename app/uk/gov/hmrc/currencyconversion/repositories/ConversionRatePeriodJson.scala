@@ -63,58 +63,53 @@ class ConversionRatePeriodJson @Inject()(writeExchangeRateRepository: ExchangeRa
       }
   }
 
-   def getExchangeRates(filePath: String) : Map[String, Option[BigDecimal]] = {
+   def getExchangeRates(filePath: String) : Future[Map[String, Option[BigDecimal]]] = {
 
     def getMinimumDecimalScale(rate: BigDecimal): BigDecimal = {
       if (rate.scale < 2) rate.setScale(2) else rate
     }
 
-    val exchangeRates : Future[ExchangeRateData] = getExchangeRatesData(filePath)
-
-    Await.ready(exchangeRates, 2 seconds)
-
-    val result: Seq[Map[String, Option[BigDecimal]]] = exchangeRates.value.get.get.exchangeData map { data =>
-      Map(data.currencyCode -> Some(getMinimumDecimalScale(data.exchangeRate)))
-    }
-
-    result.flatten.toMap
+     getExchangeRatesData(filePath).map { exchangeRates =>
+       exchangeRates.exchangeData.flatMap { data =>
+         Map(data.currencyCode -> Some(getMinimumDecimalScale(data.exchangeRate)))
+       }.toMap
+     }
   }
 
-   def getCurrencies(filePath: String): Seq[Currency] = {
-    val exchangeRates : Future[ExchangeRateData] = getExchangeRatesData(filePath)
-    Await.ready(exchangeRates, 2 seconds)
-
-    exchangeRates.value.get.get.exchangeData map { data =>
-      Currency("", data.currencyCode, data.currencyName)
-    }
+   def getCurrencies(filePath: String): Future[Seq[Currency]] = {
+     getExchangeRatesData(filePath).map { exchangeRates =>
+       exchangeRates.exchangeData map  { data =>
+         Currency("", data.currencyCode, data.currencyName)
+       }
+     }
   }
 
-  def getConversionRatePeriod(date: LocalDate): Option[ConversionRatePeriod] = {
+  def getConversionRatePeriod(date: LocalDate): Future[Option[ConversionRatePeriod]] = {
     val fileName = getExchangeRateFileName(date)
     if (fileName.equals("empty")) {
-       Option.empty
+      Future.successful(None)
     } else {
-      val rates : Map[String, Option[BigDecimal]] = getExchangeRates(fileName)
-      Some(ConversionRatePeriod(date.withDayOfMonth(1), date.withDayOfMonth(date.lengthOfMonth()),
-        None, rates))
+      getExchangeRates(fileName).map { rates =>
+        Some(ConversionRatePeriod(date.withDayOfMonth(1), date.withDayOfMonth(date.lengthOfMonth()), None, rates))
+      }
     }
   }
 
-  def getLatestConversionRatePeriod(date: LocalDate): ConversionRatePeriod = {
+  def getLatestConversionRatePeriod(date: LocalDate): Future[ConversionRatePeriod] = {
     val fileName = getExchangeRateFileName(date)
     if (fileName.equals("empty")) {
       logger.error(s"XRS_FILE_NOT_AVAILABLE_ERROR [ConversionRatePeriodJson] Exchange rate file is not available.")
-      throw new RuntimeException("Exchange rate file is not able to read.")
+      Future.failed(new RuntimeException("Exchange rate file is not able to read."))
     } else {
-      val rates : Map[String, Option[BigDecimal]] = getExchangeRates(fileName)
-      ConversionRatePeriod(date.withDayOfMonth(1), date.withDayOfMonth(date.lengthOfMonth()),
-        None, rates)
+      getExchangeRates(fileName).map { rates =>
+        ConversionRatePeriod(date.withDayOfMonth(1), date.withDayOfMonth(date.lengthOfMonth()), None, rates)
+      }
     }
   }
 
-  def getCurrencyPeriod(date: LocalDate): Option[CurrencyPeriod] = {
-    getExchangeRateFileName(date)
-    val currencies : Seq[Currency] = getCurrencies(getExchangeRateFileName(date))
-    Some(CurrencyPeriod(date.withDayOfMonth(1), date.withDayOfMonth(date.lengthOfMonth()), currencies))
+  def getCurrencyPeriod(date: LocalDate): Future[Option[CurrencyPeriod]] = {
+    getCurrencies(getExchangeRateFileName(date)).map { currencies =>
+      Some(CurrencyPeriod(date.withDayOfMonth(1), date.withDayOfMonth(date.lengthOfMonth()), currencies))
+    }
   }
 }
