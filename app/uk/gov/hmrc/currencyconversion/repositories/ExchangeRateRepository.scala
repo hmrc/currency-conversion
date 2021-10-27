@@ -26,15 +26,13 @@ import play.api.i18n.Lang.logger.logger
 import play.api.libs.json.JsObject
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
-
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.{implicitConversions, postfixOps}
 import scala.util.Try
 
 @Singleton
-class DefaultExchangeRateRepository @Inject() (
-                                                mongoComponent: MongoComponent,
+class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent
   ) (implicit ec: ExecutionContext, m: Materializer) extends PlayMongoRepository[ExchangeRateObject](
   collectionName = "exchangeCurrencyData",
   mongoComponent = mongoComponent,
@@ -80,13 +78,13 @@ class DefaultExchangeRateRepository @Inject() (
         Updates.set("exchangeRateData",Codecs.toBson(exchangeRateData)),
         options = FindOneAndUpdateOptions().upsert(false).returnDocument(ReturnDocument.AFTER)).toFuture()
         logger.info(s"[ExchangeRateRepository] writing to mongo is successful $currentFileName")
-    }
+      }
     ).getOrElse(
-      {logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_ERROR [ExchangeRateRepository] " + s"writing to mongo is failed")
+      {
+        logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_ERROR [ExchangeRateRepository] " + s"writing to mongo is failed")
         throw new Exception(s"unable to insert exchangeRateRepository ")}
     )
   }
-
 
   private def deleteOlderExchangeData() = {
     val sixMonthOldDate = LocalDate.now.minusMonths(6.toInt)

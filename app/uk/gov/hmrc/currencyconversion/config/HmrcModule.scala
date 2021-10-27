@@ -28,7 +28,7 @@ class HmrcModule extends Module {
     Seq(
       bind[ExchangeRateRepository].to[DefaultExchangeRateRepository].eagerly,
       bind[CircuitBreaker].qualifiedWith("des").toProvider[DesCircuitBreakerProvider],
-      bind[XrsExchangeRateRequestWorker].toSelf.eagerly,
+      bind[XrsExchangeRateRequestWorker].toSelf.eagerly
     )
   }
 }

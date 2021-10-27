@@ -21,9 +21,11 @@ import com.google.inject.ImplementedBy
 import java.time.LocalDate
 import uk.gov.hmrc.currencyconversion.models.{ConversionRatePeriod, CurrencyPeriod}
 
+import scala.concurrent.Future
+
 @ImplementedBy(classOf[ConversionRatePeriodJson])
 trait ConversionRatePeriodRepository {
-  def getConversionRatePeriod(date: LocalDate): Option[ConversionRatePeriod]
-  def getLatestConversionRatePeriod(date: LocalDate): ConversionRatePeriod
-  def getCurrencyPeriod(date: LocalDate): Option[CurrencyPeriod]
+  def getConversionRatePeriod(date: LocalDate): Future[Option[ConversionRatePeriod]]
+  def getLatestConversionRatePeriod(date: LocalDate): Future[ConversionRatePeriod]
+  def getCurrencyPeriod(date: LocalDate): Future[Option[CurrencyPeriod]]
 }
