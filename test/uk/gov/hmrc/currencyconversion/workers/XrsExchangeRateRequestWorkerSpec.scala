@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,16 +17,15 @@
 package uk.gov.hmrc.currencyconversion.workers
 
 
-import com.codahale.metrics.SharedMetricRegistries
 import com.github.tomakehurst.wiremock.client.WireMock._
+import org.scalatest.OptionValues
 import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
-import org.scalatest.{BeforeAndAfterEach, OptionValues}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import uk.gov.hmrc.currencyconversion.utils.WireMockHelper
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpec
 
 class XrsExchangeRateRequestWorkerSpec extends AnyWordSpec with Matchers
   with ScalaFutures with IntegrationPatience with OptionValues with MockitoSugar with WireMockHelper with Eventually {
@@ -60,34 +59,34 @@ class XrsExchangeRateRequestWorkerSpec extends AnyWordSpec with Matchers
 
   }
 
-   "Handle the service unavailable response from Xrs service" in {
+  "Handle the service unavailable response from Xrs service" in {
 
-     server.stubFor(
-       post(urlEqualTo("/passengers/exchangerequest/xrs/getexchangerate/v1"))
-         .willReturn(aResponse().withStatus(SERVICE_UNAVAILABLE))
-     )
-     val app = builder.build()
-     running(app) {
-       val worker = app.injector.instanceOf[XrsExchangeRateRequestWorker]
+    server.stubFor(
+      post(urlEqualTo("/passengers/exchangerequest/xrs/getexchangerate/v1"))
+        .willReturn(aResponse().withStatus(SERVICE_UNAVAILABLE))
+    )
+    val app = builder.build()
+    running(app) {
+      val worker = app.injector.instanceOf[XrsExchangeRateRequestWorker]
 
-       val workerResponse = worker.tap.pull.futureValue.value
+      val workerResponse = worker.tap.pull.futureValue.value
 
-       workerResponse.status shouldBe SERVICE_UNAVAILABLE
-     }
-   }
+      workerResponse.status shouldBe SERVICE_UNAVAILABLE
+    }
+  }
 
-   "Fail fast - Circuit breaker should return the fall back method" in {
+  "Fail fast - Circuit breaker should return the fall back method" in {
 
-     server.stubFor(
-       post(urlEqualTo("/passengers/exchangerequest/xrs/getexchangerate/v1"))
-         .willReturn(aResponse().withStatus(BAD_REQUEST))
-     )
-     val app = builder.build()
-     running(app) {
-       val worker = app.injector.instanceOf[XrsExchangeRateRequestWorker]
+    server.stubFor(
+      post(urlEqualTo("/passengers/exchangerequest/xrs/getexchangerate/v1"))
+        .willReturn(aResponse().withStatus(BAD_REQUEST))
+    )
+    val app = builder.build()
+    running(app) {
+      val worker = app.injector.instanceOf[XrsExchangeRateRequestWorker]
 
-       val workerResponse = worker.tap.pull.futureValue.value
-       workerResponse.status shouldBe SERVICE_UNAVAILABLE
-     }
-   }
+      val workerResponse = worker.tap.pull.futureValue.value
+      workerResponse.status shouldBe SERVICE_UNAVAILABLE
+    }
+  }
 }
