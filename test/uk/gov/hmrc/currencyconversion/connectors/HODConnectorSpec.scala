@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,14 +22,13 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.http.Fault
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import play.api.test.Injecting
-import uk.gov.hmrc.http.HeaderCarrier
-import org.scalatest.matchers.must.Matchers
-import org.scalatest.freespec.AnyFreeSpec
 import uk.gov.hmrc.currencyconversion.utils.WireMockHelper
 
 class HODConnectorSpec extends AnyFreeSpec with Matchers with GuiceOneAppPerSuite with WireMockHelper
@@ -50,8 +49,6 @@ with ScalaFutures with IntegrationPatience with Injecting with BeforeAndAfterEac
   }
 
   private lazy val connector: HODConnector = inject[HODConnector]
-
-  private implicit val hc: HeaderCarrier = HeaderCarrier()
 
   private def stubCall: MappingBuilder =
     post(urlEqualTo("/passengers/exchangerequest/xrs/getexchangerate/v1"))
