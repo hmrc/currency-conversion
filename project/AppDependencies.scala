@@ -5,14 +5,14 @@ import sbt._
 
 object AppDependencies {
 
-  val compile = Seq(
+  val compile: Seq[ModuleID] = Seq(
     ws,
-    "uk.gov.hmrc"        %% "bootstrap-backend-play-28" % "5.11.0",
-    "uk.gov.hmrc.mongo"  %% "hmrc-mongo-play-28"        % "0.52.0",
-    "org.reactivemongo"  %% "reactivemongo-akkastream"  % "0.20.13"
+    "uk.gov.hmrc"        %% "bootstrap-backend-play-28" % "5.24.0",
+    "uk.gov.hmrc.mongo"  %% "hmrc-mongo-play-28"        % "0.64.0",
+    "org.reactivemongo"  %% "reactivemongo-akkastream"  % "1.0.10"
   )
 
-  def test(scope: String = "test,it") = Seq(
+  def test(scope: String = "test,it"): Seq[ModuleID] = Seq(
     "org.scalatest"           %% "scalatest"          % "3.2.9" % scope,
     "org.pegdown"             %  "pegdown"            % "1.6.0" % scope,
     "org.mockito"             %  "mockito-all"        % "2.0.2-beta" % "test",

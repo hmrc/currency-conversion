@@ -42,6 +42,12 @@ class XrsExchangeRateRequestWorkerSpec extends AnyWordSpec with Matchers
       |"exchangeRates":[{"validFrom":"2021-06-15","validTo":"2021-06-15","currencyCode":"ARS","exchangeRate":133.25,"currencyName":"Peso"}]}"""
       .stripMargin
 
+  private val mockedEmptyExchangeRatesJsonResponse =
+    """{"timestamp":"2021-06-15T15:41:38Z",
+      |"correlationid":"72a89d23-0fc6-4212-92fc-ea8b05139c76"
+      |}"""
+      .stripMargin
+
   "must call the xrs exchange rate service and receive the response" in {
 
     server.stubFor(
@@ -88,5 +94,39 @@ class XrsExchangeRateRequestWorkerSpec extends AnyWordSpec with Matchers
       val workerResponse = worker.tap.pull.futureValue.value
       workerResponse.status shouldBe SERVICE_UNAVAILABLE
     }
+  }
+
+  "xrs exchange rate service call must not fail with empty exchange rate response" in {
+
+    server.stubFor(
+      post(urlEqualTo("/passengers/exchangerequest/xrs/getexchangerate/v1"))
+        .willReturn(aResponse().withStatus(OK).withBody(mockedEmptyExchangeRatesJsonResponse))
+    )
+    val app = builder.build()
+    running(app) {
+      val worker = app.injector.instanceOf[XrsExchangeRateRequestWorker]
+
+      val workerResponse = worker.tap.pull.futureValue.value
+      workerResponse.status shouldBe OK
+      workerResponse.body shouldBe mockedEmptyExchangeRatesJsonResponse
+    }
+  }
+
+  "xrs exchange rate service call must not fail with invalid Json response" in {
+
+    val invalidJsonResponse = "This is not JSON"
+    server.stubFor(
+      post(urlEqualTo("/passengers/exchangerequest/xrs/getexchangerate/v1"))
+        .willReturn(aResponse().withStatus(OK).withBody(invalidJsonResponse))
+    )
+    val app = builder.build()
+    running(app) {
+      val worker = app.injector.instanceOf[XrsExchangeRateRequestWorker]
+
+      val workerResponse = worker.tap.pull.futureValue.value
+      workerResponse.status shouldBe OK
+      workerResponse.body shouldBe invalidJsonResponse
+    }
+
   }
 }
