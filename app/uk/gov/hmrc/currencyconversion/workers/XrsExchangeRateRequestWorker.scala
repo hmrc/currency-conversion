@@ -24,12 +24,14 @@ import play.api.http.Status.SERVICE_UNAVAILABLE
 import play.api.i18n.Lang.logger.logger
 import play.api.libs.json.JsObject
 import uk.gov.hmrc.currencyconversion.connectors.HODConnector
+import uk.gov.hmrc.currencyconversion.models.ExchangeRateData
 import uk.gov.hmrc.currencyconversion.repositories.ExchangeRateRepository
 import uk.gov.hmrc.http.HttpReads.{is2xx, is4xx}
 import uk.gov.hmrc.http.HttpResponse
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Try}
 import scala.util.control.Exception._
 import scala.util.control.NonFatal
 
@@ -65,9 +67,7 @@ class XrsExchangeRateRequestWorker @Inject()(
         _ =>
           hodConnector.submit().flatMap {
             case response: HttpResponse if is2xx(response.status) =>
-              val exchangeRatesJson = response.json.as[JsObject]
-              writeExchangeRateRepository.insertOrUpdate(exchangeRatesJson)
-              Future.successful(response)
+              successfulResponse(response)
             case response: HttpResponse if is4xx(response.status) =>
               logger.error(s"XRS_BAD_REQUEST_FROM_EIS_ERROR  [XrsExchangeRateRequestWorker] call to DES (EIS) is failed. ${response.toString}")
               Future.successful(response)
@@ -79,6 +79,38 @@ class XrsExchangeRateRequestWorker @Inject()(
       .toMat(Sink.ignore)(Keep.left)
       .withAttributes(ActorAttributes.supervisionStrategy(supervisionStrategy))
       .run()
+  }
+
+  private def successfulResponse(response: HttpResponse) = {
+    getResponseJson(response).map {
+      exchangeRatesJson =>
+        logExchangeDataSize(exchangeRatesJson)
+        writeExchangeRateRepository.insertOrUpdate(exchangeRatesJson)
+    }
+    Future.successful(response)
+  }
+
+  private def getResponseJson(response: HttpResponse) = {
+    Try {
+      response.json.as[JsObject]
+    } recoverWith {
+      case e: Throwable =>
+        logger.error("[XrsExchangeRateRequestWorker] [getResponseJson] Cannot convert response to JSON")
+        Failure(e)
+    }
+  }
+
+  private def logExchangeDataSize(exchangeRatesJson: JsObject): Unit = {
+    Try {
+      val tps = exchangeRatesJson.as[ExchangeRateData]
+      if (tps.exchangeData.isEmpty) {
+        logger.warn("[XrsExchangeRateRequestWorker] [logExchangeDataSize] Exchange Data size is 0")
+      } else {
+        logger.info(s"[XrsExchangeRateRequestWorker] [logExchangeDataSize] Exchange Data size is ${tps.exchangeData.size}")
+      }
+    } getOrElse {
+      logger.error("[XrsExchangeRateRequestWorker] [logExchangeDataSize] Cannot convert response JSON to ExchangeRateData")
+    }
   }
 }
 

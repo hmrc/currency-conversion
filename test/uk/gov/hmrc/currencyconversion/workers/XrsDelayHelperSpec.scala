@@ -37,7 +37,7 @@ class XrsDelayHelperSpec extends AnyWordSpec with Matchers
     val helper = new XrsDelayHelper
     val delay = helper.calculateInitialDelay(scheduledTime = true, defaultDelay)
 
-    val now: LocalDateTime = Instant.now().atOffset(ZoneOffset.UTC).toLocalDateTime
+    val now: LocalDateTime = LocalDateTime.now()
     val refreshTime: LocalDateTime = now.plusMinutes(delay.toMinutes).withSecond(0).withNano(0)
 
     refreshTime shouldBe now.plusDays(1).withHour(0).withMinute(1).withSecond(0).withNano(0)

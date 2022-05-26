@@ -25,11 +25,9 @@ import scala.concurrent.duration.{Duration, FiniteDuration}
 
 class XrsDelayHelper {
 
-  final lazy val timeNow: LocalDateTime = LocalDateTime.now()
-
   def calculateInitialDelay(scheduledTime: Boolean, initialDelay: FiniteDuration): FiniteDuration = {
     if (scheduledTime) {
-      val now = timeNow.atOffset(ZoneOffset.UTC).toLocalDateTime.withSecond(0).withNano(0)
+      val now = LocalDateTime.now().atOffset(ZoneOffset.UTC).toLocalDateTime.withSecond(0).withNano(0)
       val refreshTime = now.plusDays(1).withHour(0).withMinute(1).withSecond(0).withNano(0)
       val refreshDelay = Duration(ChronoUnit.MINUTES.between(now, refreshTime), TimeUnit.MINUTES)
       logger.info(s"[XrsExchangeRateRequestWorker] Time of deployment: $now, Checking for rates file in ${refreshDelay.toMinutes} minutes")

@@ -53,7 +53,7 @@ object ExchangeRateData {
   implicit lazy val reads: Reads[ExchangeRateData] = (
     (__  \ "timestamp").read[String] and
       (__  \"correlationid").read[String] and
-      (__  \ "exchangeRates").read[Seq[ExchangeRate]]
+      (__  \ "exchangeRates").readWithDefault[Seq[ExchangeRate]](Seq.empty)
     )(ExchangeRateData.apply _)
 
   implicit lazy val writes: OWrites[ExchangeRateData] = Json.writes[ExchangeRateData]
