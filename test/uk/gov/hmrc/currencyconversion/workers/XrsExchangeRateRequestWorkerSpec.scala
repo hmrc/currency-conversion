@@ -18,7 +18,6 @@ package uk.gov.hmrc.currencyconversion.workers
 
 
 import com.github.tomakehurst.wiremock.client.WireMock._
-import org.mockito.Mockito.doReturn
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
@@ -26,12 +25,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
-import uk.gov.hmrc.currencyconversion.models.{ExchangeRate, ExchangeRateData}
-import uk.gov.hmrc.currencyconversion.repositories.ExchangeRateRepository
 import uk.gov.hmrc.currencyconversion.utils.WireMockHelper
-
-import java.time.LocalDate
-import scala.language.postfixOps
 
 class XrsExchangeRateRequestWorkerSpec extends AnyWordSpec with Matchers
   with ScalaFutures with IntegrationPatience with OptionValues with MockitoSugar with WireMockHelper with Eventually {
@@ -53,11 +47,6 @@ class XrsExchangeRateRequestWorkerSpec extends AnyWordSpec with Matchers
       |"correlationid":"72a89d23-0fc6-4212-92fc-ea8b05139c76"
       |}"""
       .stripMargin
-
-  private val thisMonth: LocalDate = LocalDate.now.withDayOfMonth(1)
-  private val lastMonth: LocalDate = LocalDate.now.minusMonths(1)
-  private val nextMonth: LocalDate = LocalDate.now.plusMonths(1)
-  private val inTwoMonths: LocalDate = LocalDate.now.plusMonths(2)
 
   "must call the xrs exchange rate service and receive the response" in {
 
@@ -140,93 +129,4 @@ class XrsExchangeRateRequestWorkerSpec extends AnyWordSpec with Matchers
     }
 
   }
-
-  "xrs exchange rate service call must not fail with invalid XRS file format" in {
-
-    val invalidJsonResponse = "{}"
-    server.stubFor(
-      post(urlEqualTo("/passengers/exchangerequest/xrs/getexchangerate/v1"))
-        .willReturn(aResponse().withStatus(OK).withBody(invalidJsonResponse))
-    )
-    val app = builder.build()
-    running(app) {
-      val worker = app.injector.instanceOf[XrsExchangeRateRequestWorker]
-
-      val workerResponse = worker.tap.pull.futureValue.value
-      workerResponse.status shouldBe OK
-      workerResponse.body shouldBe invalidJsonResponse
-    }
-
-  }
-
-  "areRatesForNextMonth is true if all validFrom dates start next month" in {
-    val exchangeRateData: ExchangeRateData = ExchangeRateData("", "",
-      Seq(ExchangeRate(nextMonth, inTwoMonths, "UDS", BigDecimal(0.75d), "US Dollars"),
-      ExchangeRate(nextMonth, inTwoMonths, "EU", BigDecimal(0.95d), "Euro")))
-
-    val rateRequest = new XrsExchangeRateRequest{}
-    rateRequest.areRatesForNextMonth(exchangeRateData) shouldBe(true)
-  }
-
-  "areRatesForNextMonth is false if validFrom dates have a mixture that start next month and valid from this month" in {
-    val exchangeRateData: ExchangeRateData = ExchangeRateData("", "",
-      Seq(ExchangeRate(nextMonth, inTwoMonths, "UDS", BigDecimal(0.75d), "US Dollars"),
-        ExchangeRate(thisMonth, nextMonth, "EU", BigDecimal(0.95d), "Euro")))
-
-    val rateRequest = new XrsExchangeRateRequest{}
-    rateRequest.areRatesForNextMonth(exchangeRateData) shouldBe(false)
-  }
-
-  "areRatesForNextMonth is false if all validFrom dates start this month" in {
-    val exchangeRateData: ExchangeRateData = ExchangeRateData("", "",
-      Seq(ExchangeRate(thisMonth, nextMonth, "UDS", BigDecimal(0.75d), "US Dollars"),
-        ExchangeRate(thisMonth, nextMonth, "EU", BigDecimal(0.95d), "Euro")))
-
-    val rateRequest = new XrsExchangeRateRequest{}
-    rateRequest.areRatesForNextMonth(exchangeRateData) shouldBe(false)
-  }
-
-  "areRatesForNextMonth is false if all validFrom dates are for last month" in {
-    val exchangeRateData: ExchangeRateData = ExchangeRateData("", "",
-      Seq(ExchangeRate(lastMonth, lastMonth, "UDS", BigDecimal(0.75d), "US Dollars"),
-        ExchangeRate(lastMonth, lastMonth, "EU", BigDecimal(0.95d), "Euro")))
-
-    val rateRequest = new XrsExchangeRateRequest{}
-    rateRequest.areRatesForNextMonth(exchangeRateData) shouldBe(false)
-  }
-
-  "when data not present for next month return false" in {
-    val rateRequest = new XrsExchangeRateRequest {
-      override private[workers] def now = LocalDate.of(2022, 6, 26)
-    }
-    val mockExchangeRateRepository = mock[ExchangeRateRepository]
-    doReturn(false) when mockExchangeRateRepository isDataPresent "exrates-monthly-0722"
-    rateRequest.isNextMonthsFileIsReceived(mockExchangeRateRepository) shouldBe(false)
-  }
-
-  "when data is present for next month return true" in {
-    val rateRequest = new XrsExchangeRateRequest {
-      override private[workers] def now = LocalDate.of(2022, 6, 26)
-    }
-    val mockExchangeRateRepository = mock[ExchangeRateRepository]
-    doReturn(true) when mockExchangeRateRepository isDataPresent "exrates-monthly-0722"
-    rateRequest.isNextMonthsFileIsReceived(mockExchangeRateRepository) shouldBe(true)
-  }
-
-  "checkNextMonthsFileIsReceivedDaysBeforeEndOfMonth" should {
-    "when within range to check if next months file has been received returns true" in {
-      val rateRequest = new XrsExchangeRateRequest {
-        override private[workers] def now = LocalDate.of(2022, 6, 26)
-      }
-      rateRequest.checkNextMonthsFileIsReceivedDaysBeforeEndOfMonth shouldBe (true)
-    }
-
-    "when not within range to check if next months file has been received return false" in {
-      val rateRequest = new XrsExchangeRateRequest {
-        override private[workers] def now = LocalDate.of(2022, 6, 25)
-      }
-      rateRequest.checkNextMonthsFileIsReceivedDaysBeforeEndOfMonth shouldBe (false)
-    }
-  }
-
 }

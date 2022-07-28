@@ -17,14 +17,16 @@
 package uk.gov.hmrc.currencyconversion.repositories
 
 import akka.stream.Materializer
-import play.api.i18n.Lang.logger.logger
 import play.api.libs.json.JsSuccess
-import play.api.libs.json.OFormat.oFormatFromReadsAndOWrites
 import uk.gov.hmrc.currencyconversion.models.{ConversionRatePeriod, Currency, CurrencyPeriod, ExchangeRateData}
 
 import java.time.LocalDate
+import play.api.i18n.Lang.logger.logger
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import play.api.libs.json.OFormat.oFormatFromReadsAndOWrites
+
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
 
 
@@ -35,7 +37,7 @@ class ConversionRatePeriodJson @Inject()(writeExchangeRateRepository: ExchangeRa
     val targetFileName = "exrates-monthly-%02d".format(date.getMonthValue) +
       date.getYear.toString.substring(2)
 
-    if (writeExchangeRateRepository.isDataPresent(targetFileName)) {
+    if (!writeExchangeRateRepository.isDataPresent(targetFileName)) {
       targetFileName
     } else {
       logger.info(s"$targetFileName is not present")

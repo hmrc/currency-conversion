@@ -42,7 +42,7 @@ class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent
 
 
   private def date = LocalDate.now()
-  private def currentFileName(date: LocalDate = date): String = "exrates-monthly-%02d".format(date.getMonthValue) +
+  private def currentFileName: String = "exrates-monthly-%02d".format(date.getMonthValue) +
     date.getYear.toString.substring(2)
 
 
@@ -53,20 +53,15 @@ class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent
   def isDataPresent(fileName: String): Boolean = {
     val existingData = get(fileName)
     Await.ready(existingData, 3 second)
-    existingData.value.get.get.isDefined
+    existingData.value.get.get.isEmpty
   }
 
-  def insert(exchangeRateData: JsObject, forNextMonth: Boolean = false): Unit = {
+  def insert(exchangeRateData: JsObject): Unit = {
     Try(
       {
-        val data = ExchangeRateObject(mongoId(forNextMonth), exchangeRateData)
+        val data = ExchangeRateObject(currentFileName, exchangeRateData)
         collection.insertOne(data).toFuture()
-        if (forNextMonth) {
-          // Not really a warning, but this is the only way to generate alerts in Pager Duty without changing PROD log level to INFO
-          logger.warn(s"XRS_FILE_INSERTED_FOR_NEXT_MONTH [ExchangeRateRepository] writing to mongo is successful ${mongoId(forNextMonth)}")
-        } else {
-          logger.info(s"[ExchangeRateRepository] writing to mongo is successful ${mongoId(forNextMonth)}")
-        }
+        logger.info(s"[ExchangeRateRepository] writing to mongo is successful $currentFileName")
       }
     ).getOrElse(
       {
@@ -76,15 +71,13 @@ class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent
     )
   }
 
-  private def mongoId(forNextMonth: Boolean) = if (forNextMonth) currentFileName(date.plusMonths(1)) else currentFileName()
-
-  def update(exchangeRateData: JsObject, forNextMonth: Boolean = false): Unit = {
+  def update(exchangeRateData: JsObject): Unit = {
 
     Try({
-      collection.findOneAndUpdate(equal("_id", Codecs.toBson(mongoId(forNextMonth))),
+      collection.findOneAndUpdate(equal("_id", Codecs.toBson(currentFileName)),
         Updates.set("exchangeRateData",Codecs.toBson(exchangeRateData)),
         options = FindOneAndUpdateOptions().upsert(false).returnDocument(ReturnDocument.AFTER)).toFuture()
-        logger.info(s"[ExchangeRateRepository] writing to mongo is successful ${mongoId(forNextMonth)}")
+        logger.info(s"[ExchangeRateRepository] writing to mongo is successful $currentFileName")
       }
     ).getOrElse(
       {
@@ -104,11 +97,11 @@ class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent
     }
   }
 
-  def insertOrUpdate(exchangeRateData: JsObject, forNextMonth: Boolean): Future[Any] = {
-    get(mongoId(forNextMonth)) map {
-      case response if response.isEmpty => insert(exchangeRateData, forNextMonth)
+  def insertOrUpdate(exchangeRateData: JsObject): Future[Any] = {
+    get(currentFileName) map {
+      case response if response.isEmpty => insert(exchangeRateData)
         Future.successful(response)
-      case _ => update(exchangeRateData, forNextMonth)
+      case _ => update(exchangeRateData)
         Future.successful(None)
     }
     deleteOlderExchangeData()
@@ -117,9 +110,9 @@ class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent
 }
 
 trait ExchangeRateRepository {
-  def insert(data: JsObject, forNextMonth: Boolean = false): Unit
-  def update(data: JsObject, forNextMonth: Boolean = false): Unit
+  def insert(data: JsObject): Unit
+  def update(data: JsObject): Unit
   def get(fileName: String): Future[Option[ExchangeRateObject]]
-  def insertOrUpdate(data: JsObject, forNextMonth: Boolean = false):Future[Any]
+  def insertOrUpdate(data: JsObject):Future[Any]
   def isDataPresent(fileName: String): Boolean
 }
