@@ -16,16 +16,17 @@
 
 package uk.gov.hmrc.currencyconversion.controllers
 
-import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, ZonedDateTime}
-import javax.inject.{Inject, Singleton}
 import play.api.i18n.Lang.logger.logger
 import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.currencyconversion.models.ExchangeRateOldFileResult
 import uk.gov.hmrc.currencyconversion.services.ExchangeRateService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import scala.concurrent.{ExecutionContext, Future}
+
+import java.time.format.DateTimeFormatter
+import java.time.{LocalDate, ZonedDateTime}
+import javax.inject.{Inject, Singleton}
+import scala.concurrent.ExecutionContext
 
 @Singleton()
 class ExchangeRateController @Inject() (
@@ -33,7 +34,7 @@ class ExchangeRateController @Inject() (
               controllerComponents: ControllerComponents
             ) (implicit ec: ExecutionContext) extends BackendController(controllerComponents) {
 
-  def getRatesByCurrencyCode(cc: List[String], date: LocalDate): Action[AnyContent] = Action.async { implicit request =>
+  def getRatesByCurrencyCode(cc: List[String], date: LocalDate): Action[AnyContent] = Action.async {
 
     val dateTime = ZonedDateTime.now().format(DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss z"))
 
@@ -41,7 +42,8 @@ class ExchangeRateController @Inject() (
       val rates = exchangeRateResults.map(_.rate)
 
       if (exchangeRateResults.exists(result => result.isInstanceOf[ExchangeRateOldFileResult])) {
-        logger.error("XRS_FILE_NOT_AVAILABLE_ERROR [ExchangeRateController] [getRatesByCurrencyCode] Using older XRS file as XRS file for supplied date could not be found...")
+        logger.error("XRS_FILE_NOT_AVAILABLE_ERROR [ExchangeRateController] [getRatesByCurrencyCode] Using older " +
+          "XRS file as XRS file for supplied date could not be found...")
         Ok(Json.toJson(rates)).withHeaders(WARNING -> s"""299 - "Date out of range" "$dateTime"""")
       }
       else {
@@ -50,12 +52,10 @@ class ExchangeRateController @Inject() (
     }
   }
 
-  def getCurrenciesByDate(date: LocalDate): Action[AnyContent] = Action.async { implicit request =>
-    exchangeRatesService.getCurrencies(date).map { cp =>
-      cp match {
-        case Some(cp) => Ok(Json.toJson(cp))
-        case None => NotFound
-      }
+  def getCurrenciesByDate(date: LocalDate): Action[AnyContent] = Action.async {
+    exchangeRatesService.getCurrencies(date).map {
+      case Some(cp) => Ok(Json.toJson(cp))
+      case None => NotFound
     }
   }
 }
