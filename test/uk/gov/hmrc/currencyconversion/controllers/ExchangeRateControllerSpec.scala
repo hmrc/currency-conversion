@@ -49,7 +49,7 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with GuiceOneAppPerSuit
   override def beforeEach(): Unit = {
     Mockito.reset(exchangeRateRepository)
     val exchangeRate : ExchangeRateObject = ExchangeRateObject("exrates-monthly-0919", Json.parse(data).as[JsObject])
-    doReturn(false) when exchangeRateRepository isDataPresent "exrates-monthly-0919"
+    doReturn(Future.successful(true)) when exchangeRateRepository isDataPresent "exrates-monthly-0919"
     doReturn(successful(Some(exchangeRate))) when exchangeRateRepository get "exrates-monthly-0919"
 
     SharedMetricRegistries.clear()
@@ -160,7 +160,7 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with GuiceOneAppPerSuit
      "Getting rates for a date which has no rates Json file and a valid currency code" must {
 
        "return 200 and the correct json" in {
-         doReturn(true) when exchangeRateRepository isDataPresent "exrates-monthly-1019"
+         doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-1019"
 
          val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-10-10?cc=USD")).get
 
@@ -172,7 +172,7 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with GuiceOneAppPerSuit
 
      "Getting rates for a date which has no rates Json file, 1 valid currency code and 1 invalid currency code" must {
        "return response from previous month" in {
-         doReturn(true) when exchangeRateRepository isDataPresent "exrates-monthly-1019"
+         doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-1019"
          val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-10-10?cc=USD&cc=INVALID")).get
 
          status(result) shouldBe Status.OK
@@ -225,7 +225,7 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with GuiceOneAppPerSuit
        "return 200 and the correct json" in {
 
          val exchangeRate : ExchangeRateObject = ExchangeRateObject("exrates-monthly-0919", Json.parse(data).as[JsObject])
-         doReturn(false) when exchangeRateRepository isDataPresent "exrates-monthly-0919"
+         doReturn(Future.successful(true)) when exchangeRateRepository isDataPresent "exrates-monthly-0919"
          doReturn(successful(Some(exchangeRate))) when exchangeRateRepository get "exrates-monthly-0919"
 
          val result = route(app, FakeRequest("GET", "/currency-conversion/currencies/2019-09-01")).get
@@ -251,7 +251,7 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with GuiceOneAppPerSuit
        "return 200 if fallback is available" in {
 
          val exchangeRate : ExchangeRateObject = ExchangeRateObject("exrates-monthly-0919", Json.parse(data).as[JsObject])
-         doReturn(false) when exchangeRateRepository isDataPresent "exrates-monthly-0919"
+         doReturn(Future.successful(true)) when exchangeRateRepository isDataPresent  "exrates-monthly-0919"
          doReturn(successful(Some(exchangeRate))) when exchangeRateRepository get "exrates-monthly-0919"
 
 
