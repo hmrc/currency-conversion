@@ -23,8 +23,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.currencyconversion.utils.WireMockHelper
 
-import java.time.{Instant, LocalDate, LocalDateTime, ZoneId, ZoneOffset}
-import java.util.{Calendar, TimeZone}
+import java.time.LocalDateTime
 import scala.concurrent.duration.FiniteDuration
 
 class XrsDelayHelperSpec extends AnyWordSpec with Matchers

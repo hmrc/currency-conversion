@@ -16,52 +16,52 @@
 
 package uk.gov.hmrc.currencyconversion.repositories
 
-import java.time.LocalDate
-import uk.gov.hmrc.currencyconversion.models.ExchangeRateObject
-import akka.stream.Materializer
 import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.{FindOneAndUpdateOptions, ReturnDocument, Updates}
 import play.api.i18n.Lang.logger.logger
 import play.api.libs.json.JsObject
+import uk.gov.hmrc.currencyconversion.models.ExchangeRateObject
+import uk.gov.hmrc.currencyconversion.utils.MongoIdHelper.currentFileName
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, ExecutionContext, Future}
+
+import java.time.LocalDate
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.{implicitConversions, postfixOps}
 import scala.util.Try
 
 @Singleton
-class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent
-  ) (implicit ec: ExecutionContext, m: Materializer) extends PlayMongoRepository[ExchangeRateObject](
+class DefaultExchangeRateRepository @Inject()
+(mongoComponent: MongoComponent)
+(implicit ec: ExecutionContext) extends PlayMongoRepository[ExchangeRateObject](
   collectionName = "exchangeCurrencyData",
   mongoComponent = mongoComponent,
-  domainFormat   = ExchangeRateObject.format,
+  domainFormat = ExchangeRateObject.format,
   indexes = Seq())
   with ExchangeRateRepository {
 
-
   private def date = LocalDate.now()
-  private def currentFileName: String = "exrates-monthly-%02d".format(date.getMonthValue) +
-    date.getYear.toString.substring(2)
-
 
   def get(fileName: String): Future[Option[ExchangeRateObject]] =
-    collection.find(equal("_id" , Codecs.toBson(fileName))).headOption()
+    collection.find(equal("_id", Codecs.toBson(fileName))).headOption()
 
-
-  def isDataPresent(fileName: String): Boolean = {
+  def isDataPresent(fileName: String): Future[Boolean] = {
     val existingData = get(fileName)
-    Await.ready(existingData, 3 second)
-    existingData.value.get.get.isEmpty
+    existingData.map(value => value.isDefined)
   }
 
-  def insert(exchangeRateData: JsObject): Unit = {
+  def insert(exchangeRateData: JsObject, forNextMonth: Boolean = false): Unit = {
     Try(
       {
-        val data = ExchangeRateObject(currentFileName, exchangeRateData)
+        val data = ExchangeRateObject(mongoId(forNextMonth), exchangeRateData)
         collection.insertOne(data).toFuture()
-        logger.info(s"[ExchangeRateRepository] writing to mongo is successful $currentFileName")
+        if (forNextMonth) {
+          // Not really a warning, but this is the only way to generate alerts in Pager Duty without changing PROD log level to INFO
+          logger.warn(s"XRS_FILE_INSERTED_FOR_NEXT_MONTH [ExchangeRateRepository] writing to mongo is successful ${mongoId(forNextMonth)}")
+        } else {
+          logger.info(s"[ExchangeRateRepository] writing to mongo is successful ${mongoId(forNextMonth)}")
+        }
       }
     ).getOrElse(
       {
@@ -71,25 +71,27 @@ class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent
     )
   }
 
-  def update(exchangeRateData: JsObject): Unit = {
+  private def mongoId(forNextMonth: Boolean) = if (forNextMonth) currentFileName(date.plusMonths(1)) else currentFileName()
+
+  def update(exchangeRateData: JsObject, forNextMonth: Boolean = false): Unit = {
 
     Try({
-      collection.findOneAndUpdate(equal("_id", Codecs.toBson(currentFileName)),
-        Updates.set("exchangeRateData",Codecs.toBson(exchangeRateData)),
+      collection.findOneAndUpdate(equal("_id", Codecs.toBson(mongoId(forNextMonth))),
+        Updates.set("exchangeRateData", Codecs.toBson(exchangeRateData)),
         options = FindOneAndUpdateOptions().upsert(false).returnDocument(ReturnDocument.AFTER)).toFuture()
-        logger.info(s"[ExchangeRateRepository] writing to mongo is successful $currentFileName")
-      }
+      logger.info(s"[ExchangeRateRepository] writing to mongo is successful ${mongoId(forNextMonth)}")
+    }
     ).getOrElse(
       {
         logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_ERROR [ExchangeRateRepository] " + s"writing to mongo is failed")
-        throw new Exception(s"unable to insert exchangeRateRepository ")}
+        throw new Exception(s"unable to insert exchangeRateRepository ")
+      }
     )
   }
 
   private def deleteOlderExchangeData() = {
     val sixMonthOldDate = LocalDate.now.minusMonths(6.toInt)
-    val oldFileName = "exrates-monthly-%02d".format(sixMonthOldDate.getMonthValue) +
-      sixMonthOldDate.getYear.toString.substring(2)
+    val oldFileName = currentFileName(sixMonthOldDate)
 
     collection.findOneAndDelete(equal("_id", oldFileName)).toFutureOption() map {
       case Some(_) => logger.info(s"[ExchangeRateRepository] deleting older data from mongo is successful $oldFileName")
@@ -97,11 +99,11 @@ class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent
     }
   }
 
-  def insertOrUpdate(exchangeRateData: JsObject): Future[Any] = {
-    get(currentFileName) map {
-      case response if response.isEmpty => insert(exchangeRateData)
+  def insertOrUpdate(exchangeRateData: JsObject, forNextMonth: Boolean): Future[Any] = {
+    get(mongoId(forNextMonth)) map {
+      case response if response.isEmpty => insert(exchangeRateData, forNextMonth)
         Future.successful(response)
-      case _ => update(exchangeRateData)
+      case _ => update(exchangeRateData, forNextMonth)
         Future.successful(None)
     }
     deleteOlderExchangeData()
@@ -110,9 +112,13 @@ class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent
 }
 
 trait ExchangeRateRepository {
-  def insert(data: JsObject): Unit
-  def update(data: JsObject): Unit
+  def insert(data: JsObject, forNextMonth: Boolean = false): Unit
+
+  def update(data: JsObject, forNextMonth: Boolean = false): Unit
+
   def get(fileName: String): Future[Option[ExchangeRateObject]]
-  def insertOrUpdate(data: JsObject):Future[Any]
-  def isDataPresent(fileName: String): Boolean
+
+  def insertOrUpdate(data: JsObject, forNextMonth: Boolean = false): Future[Any]
+
+  def isDataPresent(fileName: String): Future[Boolean]
 }
