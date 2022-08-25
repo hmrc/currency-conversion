@@ -32,14 +32,14 @@ import scala.language.{implicitConversions, postfixOps}
 import scala.util.Try
 
 @Singleton
-class DefaultExchangeRateRepository @Inject()
-(mongoComponent: MongoComponent)
-(implicit ec: ExecutionContext) extends PlayMongoRepository[ExchangeRateObject](
-  collectionName = "exchangeCurrencyData",
-  mongoComponent = mongoComponent,
-  domainFormat = ExchangeRateObject.format,
-  indexes = Seq())
-  with ExchangeRateRepository {
+class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
+    extends PlayMongoRepository[ExchangeRateObject](
+      collectionName = "exchangeCurrencyData",
+      mongoComponent = mongoComponent,
+      domainFormat = ExchangeRateObject.format,
+      indexes = Seq()
+    )
+    with ExchangeRateRepository {
 
   private def date = LocalDate.now()
 
@@ -51,59 +51,60 @@ class DefaultExchangeRateRepository @Inject()
     existingData.map(value => value.isDefined)
   }
 
-  def insert(exchangeRateData: JsObject, forNextMonth: Boolean = false): Unit = {
-    Try(
-      {
-        val data = ExchangeRateObject(mongoId(forNextMonth), exchangeRateData)
-        collection.insertOne(data).toFuture()
-        if (forNextMonth) {
-          // Not really a warning, but this is the only way to generate alerts in Pager Duty without changing PROD log level to INFO
-          logger.warn(s"XRS_FILE_INSERTED_FOR_NEXT_MONTH [ExchangeRateRepository] writing to mongo is successful ${mongoId(forNextMonth)}")
-        } else {
-          logger.info(s"[ExchangeRateRepository] writing to mongo is successful ${mongoId(forNextMonth)}")
-        }
+  def insert(exchangeRateData: JsObject, forNextMonth: Boolean = false): Unit =
+    Try {
+      val data = ExchangeRateObject(mongoId(forNextMonth), exchangeRateData)
+      collection.insertOne(data).toFuture()
+      if (forNextMonth) {
+        // Not really a warning, but this is the only way to generate alerts in Pager Duty without changing PROD log level to INFO
+        logger.warn(
+          s"XRS_FILE_INSERTED_FOR_NEXT_MONTH [ExchangeRateRepository] writing to mongo is successful ${mongoId(forNextMonth)}"
+        )
+      } else {
+        logger.info(s"[ExchangeRateRepository] writing to mongo is successful ${mongoId(forNextMonth)}")
       }
-    ).getOrElse(
-      {
+    }
+      .getOrElse {
         logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_ERROR [ExchangeRateRepository] " + s"writing to mongo is failed ")
         throw new Exception(s"unable to insert exchangeRateRepository")
       }
-    )
-  }
 
-  private def mongoId(forNextMonth: Boolean) = if (forNextMonth) currentFileName(date.plusMonths(1)) else currentFileName()
+  private def mongoId(forNextMonth: Boolean) =
+    if (forNextMonth) currentFileName(date.plusMonths(1)) else currentFileName()
 
-  def update(exchangeRateData: JsObject, forNextMonth: Boolean = false): Unit = {
-
-    Try({
-      collection.findOneAndUpdate(equal("_id", Codecs.toBson(mongoId(forNextMonth))),
-        Updates.set("exchangeRateData", Codecs.toBson(exchangeRateData)),
-        options = FindOneAndUpdateOptions().upsert(false).returnDocument(ReturnDocument.AFTER)).toFuture()
+  def update(exchangeRateData: JsObject, forNextMonth: Boolean = false): Unit =
+    Try {
+      collection
+        .findOneAndUpdate(
+          equal("_id", Codecs.toBson(mongoId(forNextMonth))),
+          Updates.set("exchangeRateData", Codecs.toBson(exchangeRateData)),
+          options = FindOneAndUpdateOptions().upsert(false).returnDocument(ReturnDocument.AFTER)
+        )
+        .toFuture()
       logger.info(s"[ExchangeRateRepository] writing to mongo is successful ${mongoId(forNextMonth)}")
     }
-    ).getOrElse(
-      {
+      .getOrElse {
         logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_ERROR [ExchangeRateRepository] " + s"writing to mongo is failed")
         throw new Exception(s"unable to insert exchangeRateRepository ")
       }
-    )
-  }
 
   private def deleteOlderExchangeData() = {
     val sixMonthOldDate = LocalDate.now.minusMonths(6.toInt)
-    val oldFileName = currentFileName(sixMonthOldDate)
+    val oldFileName     = currentFileName(sixMonthOldDate)
 
     collection.findOneAndDelete(equal("_id", oldFileName)).toFutureOption() map {
       case Some(_) => logger.info(s"[ExchangeRateRepository] deleting older data from mongo is successful $oldFileName")
-      case _ => logger.warn(s"[ExchangeRateRepository] no older data is available")
+      case _       => logger.warn(s"[ExchangeRateRepository] no older data is available")
     }
   }
 
   def insertOrUpdate(exchangeRateData: JsObject, forNextMonth: Boolean): Future[Any] = {
     get(mongoId(forNextMonth)) map {
-      case response if response.isEmpty => insert(exchangeRateData, forNextMonth)
+      case response if response.isEmpty =>
+        insert(exchangeRateData, forNextMonth)
         Future.successful(response)
-      case _ => update(exchangeRateData, forNextMonth)
+      case _                            =>
+        update(exchangeRateData, forNextMonth)
         Future.successful(None)
     }
     deleteOlderExchangeData()

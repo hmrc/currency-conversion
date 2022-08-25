@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.currencyconversion.controllers
 
-
-
 import com.codahale.metrics.SharedMetricRegistries
 import org.mockito.Mockito
 import org.mockito.Mockito.doReturn
@@ -42,13 +40,17 @@ import play.api.mvc.Result
 
 import scala.concurrent.Future
 
-class ExchangeRateControllerSpec extends AnyWordSpecLike with GuiceOneAppPerSuite with MockitoSugar with BeforeAndAfterEach {
+class ExchangeRateControllerSpec
+    extends AnyWordSpecLike
+    with GuiceOneAppPerSuite
+    with MockitoSugar
+    with BeforeAndAfterEach {
 
   private lazy val exchangeRateRepository = mock[ExchangeRateRepository]
 
   override def beforeEach(): Unit = {
     Mockito.reset(exchangeRateRepository)
-    val exchangeRate : ExchangeRateObject = ExchangeRateObject("exrates-monthly-0919", Json.parse(data).as[JsObject])
+    val exchangeRate: ExchangeRateObject = ExchangeRateObject("exrates-monthly-0919", Json.parse(data).as[JsObject])
     doReturn(Future.successful(true)) when exchangeRateRepository isDataPresent "exrates-monthly-0919"
     doReturn(successful(Some(exchangeRate))) when exchangeRateRepository get "exrates-monthly-0919"
 
@@ -88,8 +90,6 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with GuiceOneAppPerSuit
       |        ]
       |}""".stripMargin
 
-
-
   "Getting rates for a valid date and 1 valid currency" must {
 
     "return 200 and the correct json" in {
@@ -97,7 +97,6 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with GuiceOneAppPerSuit
       val result = await(route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-10?cc=USD")).get)
 
       result.header.status shouldBe OK
-
 
       result.header.headers.get("Warning") shouldBe None
 
@@ -112,7 +111,6 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with GuiceOneAppPerSuit
 
       result.header.status shouldBe OK
 
-
       result.header.headers.get("Warning") shouldBe None
 
       contentAsJson(Future.successful(result)) shouldBe Json.arr(
@@ -122,13 +120,11 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with GuiceOneAppPerSuit
     }
   }
 
-
-  "Getting rates for a valid date and 1 invalid currency" must  {
+  "Getting rates for a valid date and 1 invalid currency" must {
 
     "return 200 and the correct json" in {
 
       val result = await(route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-10?cc=INVALID")).get)
-
 
       result.header.status shouldBe OK
 
@@ -140,129 +136,141 @@ class ExchangeRateControllerSpec extends AnyWordSpecLike with GuiceOneAppPerSuit
     }
   }
 
-    "Getting rates for a valid date and 1 valid currency and 1 invalid currency" must {
+  "Getting rates for a valid date and 1 valid currency and 1 invalid currency" must {
 
-      "return 200 and the correct json" in {
+    "return 200 and the correct json" in {
 
-        val result = await(route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-10?cc=USD&cc=INVALID")).get)
+      val result = await(route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-10?cc=USD&cc=INVALID")).get)
 
-        result.header.status shouldBe OK
+      result.header.status shouldBe OK
 
-        result.header.headers.get("Warning") shouldBe None
+      result.header.headers.get("Warning") shouldBe None
 
-        contentAsJson(Future.successful(result)).as[JsArray].value(0).as[JsObject].keys shouldBe Set("startDate", "endDate", "currencyCode", "rate")
-        contentAsJson(Future.successful(result)).as[JsArray].value(1).as[JsObject].keys shouldBe Set("startDate", "endDate", "currencyCode")
+      contentAsJson(Future.successful(result)).as[JsArray].value(0).as[JsObject].keys shouldBe Set(
+        "startDate",
+        "endDate",
+        "currencyCode",
+        "rate"
+      )
+      contentAsJson(Future.successful(result)).as[JsArray].value(1).as[JsObject].keys shouldBe Set(
+        "startDate",
+        "endDate",
+        "currencyCode"
+      )
 
-      }
     }
+  }
 
+  "Getting rates for a date which has no rates Json file and a valid currency code" must {
 
-     "Getting rates for a date which has no rates Json file and a valid currency code" must {
+    "return 200 and the correct json" in {
+      doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-1019"
 
-       "return 200 and the correct json" in {
-         doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-1019"
+      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-10-10?cc=USD")).get
 
-         val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-10-10?cc=USD")).get
+      status(result) shouldBe Status.OK
 
-         status(result) shouldBe Status.OK
+      contentAsJson(result).as[JsArray].value(0).as[JsObject].keys shouldBe Set(
+        "startDate",
+        "endDate",
+        "currencyCode",
+        "rate"
+      )
+    }
+  }
 
-         contentAsJson(result).as[JsArray].value(0).as[JsObject].keys shouldBe Set("startDate", "endDate", "currencyCode", "rate")
-       }
-     }
+  "Getting rates for a date which has no rates Json file, 1 valid currency code and 1 invalid currency code" must {
+    "return response from previous month" in {
+      doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-1019"
+      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-10-10?cc=USD&cc=INVALID")).get
 
-     "Getting rates for a date which has no rates Json file, 1 valid currency code and 1 invalid currency code" must {
-       "return response from previous month" in {
-         doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-1019"
-         val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-10-10?cc=USD&cc=INVALID")).get
+      status(result) shouldBe Status.OK
+    }
+  }
 
-         status(result) shouldBe Status.OK
-       }
-     }
+  "Getting rates for last day of the month and 1 valid currency code" must {
 
-     "Getting rates for last day of the month and 1 valid currency code" must {
+    "return 200 and the correct json which gets rate from file of the same month" in {
 
-       "return 200 and the correct json which gets rate from file of the same month" in {
+      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-30?cc=USD")).get
 
-         val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-30?cc=USD")).get
+      status(result) shouldBe Status.OK
 
-         status(result) shouldBe Status.OK
+      contentAsJson(result) shouldBe Json.arr(
+        Json.obj("startDate" -> "2019-09-01", "endDate" -> "2019-09-30", "currencyCode" -> "USD", "rate" -> "1.213")
+      )
+    }
+  }
 
-         contentAsJson(result) shouldBe Json.arr(
-           Json.obj("startDate" -> "2019-09-01", "endDate" -> "2019-09-30", "currencyCode" -> "USD", "rate" -> "1.213")
-         )
-       }
-     }
+  "Getting rates for first day of the month and 1 valid currency code" must {
 
-     "Getting rates for first day of the month and 1 valid currency code" must {
+    "return 200 and the correct json which gets rate from file of the same month" in {
 
-       "return 200 and the correct json which gets rate from file of the same month" in {
+      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-01?cc=USD")).get
 
-         val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-01?cc=USD")).get
+      status(result) shouldBe Status.OK
 
-         status(result) shouldBe Status.OK
+      contentAsJson(result) shouldBe Json.arr(
+        Json.obj("startDate" -> "2019-09-01", "endDate" -> "2019-09-30", "currencyCode" -> "USD", "rate" -> "1.213")
+      )
+    }
+  }
 
-         contentAsJson(result) shouldBe Json.arr(
-           Json.obj("startDate" -> "2019-09-01", "endDate" -> "2019-09-30", "currencyCode" -> "USD", "rate" -> "1.213")
-         )
-       }
-     }
+  "Getting rates for an invalid date" must {
 
-     "Getting rates for an invalid date" must {
+    "return 400 and the correct json" in {
 
-       "return 400 and the correct json" in {
+      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/INVALID-DATE?cc=USD")).get
 
-         val result = route(app, FakeRequest("GET", "/currency-conversion/rates/INVALID-DATE?cc=USD")).get
+      status(result) shouldBe Status.BAD_REQUEST
 
-         status(result) shouldBe Status.BAD_REQUEST
+      contentAsJson(result) shouldBe Json.obj("statusCode" -> 400, "message" -> "bad request, cause: REDACTED")
 
-         contentAsJson(result) shouldBe Json.obj("statusCode" -> 400, "message" -> "bad request, cause: REDACTED")
+    }
+  }
 
-       }
-     }
+  "Getting currencies for a valid date" must {
 
-     "Getting currencies for a valid date" must {
+    "return 200 and the correct json" in {
 
-       "return 200 and the correct json" in {
+      val exchangeRate: ExchangeRateObject = ExchangeRateObject("exrates-monthly-0919", Json.parse(data).as[JsObject])
+      doReturn(Future.successful(true)) when exchangeRateRepository isDataPresent "exrates-monthly-0919"
+      doReturn(successful(Some(exchangeRate))) when exchangeRateRepository get "exrates-monthly-0919"
 
-         val exchangeRate : ExchangeRateObject = ExchangeRateObject("exrates-monthly-0919", Json.parse(data).as[JsObject])
-         doReturn(Future.successful(true)) when exchangeRateRepository isDataPresent "exrates-monthly-0919"
-         doReturn(successful(Some(exchangeRate))) when exchangeRateRepository get "exrates-monthly-0919"
+      val result = route(app, FakeRequest("GET", "/currency-conversion/currencies/2019-09-01")).get
 
-         val result = route(app, FakeRequest("GET", "/currency-conversion/currencies/2019-09-01")).get
+      status(result) shouldBe Status.OK
 
-         status(result) shouldBe Status.OK
+      contentAsJson(result).as[JsObject].keys shouldBe Set("start", "end", "currencies")
+    }
+  }
 
-         contentAsJson(result).as[JsObject].keys shouldBe Set("start", "end", "currencies")
-       }
-     }
+  "Getting currencies for an invalid date" must {
 
-     "Getting currencies for an invalid date" must {
+    "return 400" in {
 
-       "return 400" in {
+      val result = route(app, FakeRequest("GET", "/currency-conversion/currencies/INVALID-DATE")).get
 
-         val result = route(app, FakeRequest("GET", "/currency-conversion/currencies/INVALID-DATE")).get
+      status(result) shouldBe Status.BAD_REQUEST
+    }
+  }
 
-         status(result) shouldBe Status.BAD_REQUEST
-       }
-     }
+  "Getting currencies for a date which does not exist" must {
 
-     "Getting currencies for a date which does not exist" must {
+    "return 200 if fallback is available" in {
 
-       "return 200 if fallback is available" in {
+      val exchangeRate: ExchangeRateObject = ExchangeRateObject("exrates-monthly-0919", Json.parse(data).as[JsObject])
+      doReturn(Future.successful(true)) when exchangeRateRepository isDataPresent "exrates-monthly-0919"
+      doReturn(successful(Some(exchangeRate))) when exchangeRateRepository get "exrates-monthly-0919"
 
-         val exchangeRate : ExchangeRateObject = ExchangeRateObject("exrates-monthly-0919", Json.parse(data).as[JsObject])
-         doReturn(Future.successful(true)) when exchangeRateRepository isDataPresent  "exrates-monthly-0919"
-         doReturn(successful(Some(exchangeRate))) when exchangeRateRepository get "exrates-monthly-0919"
+      val date = LocalDate.of(2019.toInt, 9.toInt, 22.toInt)
 
+      val result = route(app, FakeRequest("GET", s"/currency-conversion/currencies/$date")).get
 
-         val date = LocalDate.of(2019.toInt, 9.toInt, 22.toInt)
+      status(result) shouldBe Status.OK
 
-         val result = route(app, FakeRequest("GET", s"/currency-conversion/currencies/$date")).get
-
-         status(result) shouldBe Status.OK
-
-         contentAsJson(result).as[JsObject].keys shouldBe Set("start", "end", "currencies")
-       }
-     }
+      contentAsJson(result).as[JsObject].keys shouldBe Set("start", "end", "currencies")
+    }
+  }
 
 }

@@ -23,7 +23,7 @@ import play.api.http.{ContentTypes, HeaderNames}
 import play.api.Configuration
 import play.api.http.Status.SERVICE_UNAVAILABLE
 import play.api.libs.json.{JsValue, Json}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse,HttpClient}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 import uk.gov.hmrc.currencyconversion.models.Service
 
 import java.util.UUID
@@ -35,36 +35,35 @@ class HODConnector @Inject() (
   http: HttpClient,
   config: Configuration,
   @Named("des") circuitBreaker: CircuitBreaker
-  )(implicit ec: ExecutionContext) extends HttpDate {
-
+)(implicit ec: ExecutionContext)
+    extends HttpDate {
 
   private val bearerToken = config.get[String]("microservice.services.des.bearer-token")
-  private val baseUrl = config.get[Service]("microservice.services.des")
+  private val baseUrl     = config.get[Service]("microservice.services.des")
   private val xrsEndPoint = config.get[String]("microservice.services.des.endpoint")
   private val environment = config.get[String]("microservice.services.des.environment")
 
   private val CORRELATION_ID: String = "X-Correlation-ID"
-  private val ENVIRONMENT: String = "Environment"
+  private val ENVIRONMENT: String    = "Environment"
 
-   def submit(): Future[HttpResponse] = {
+  def submit(): Future[HttpResponse] = {
 
-    implicit val hc: HeaderCarrier = {
-
+    implicit val hc: HeaderCarrier =
       HeaderCarrier()
         .withExtraHeaders(
-          HeaderNames.ACCEPT -> ContentTypes.JSON,
-          HeaderNames.CONTENT_TYPE -> ContentTypes.JSON,
-          HeaderNames.DATE -> now,
+          HeaderNames.ACCEPT        -> ContentTypes.JSON,
+          HeaderNames.CONTENT_TYPE  -> ContentTypes.JSON,
+          HeaderNames.DATE          -> now,
           HeaderNames.AUTHORIZATION -> s"Bearer $bearerToken",
-          CORRELATION_ID -> UUID.randomUUID.toString,
-          ENVIRONMENT -> environment
+          CORRELATION_ID            -> UUID.randomUUID.toString,
+          ENVIRONMENT               -> environment
         )
-    }
 
-    def call (implicit hc: HeaderCarrier): Future[HttpResponse] =
+    def call(implicit hc: HeaderCarrier): Future[HttpResponse] =
       http.POST[JsValue, HttpResponse](s"$baseUrl$xrsEndPoint", Json.parse("""{}"""))
 
-    circuitBreaker.withCircuitBreaker(call)
+    circuitBreaker
+      .withCircuitBreaker(call)
       .fallbackTo(Future.successful(HttpResponse(SERVICE_UNAVAILABLE, s"Fall back response from $baseUrl$xrsEndPoint")))
-    }
+  }
 }

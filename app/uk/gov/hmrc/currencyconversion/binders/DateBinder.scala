@@ -23,19 +23,18 @@ import scala.util.Try
 
 object DateBinder {
 
-  implicit def bindableDate(implicit stringBinder: PathBindable[String]): PathBindable[LocalDate] = new PathBindable[LocalDate] {
+  implicit def bindableDate(implicit stringBinder: PathBindable[String]): PathBindable[LocalDate] =
+    new PathBindable[LocalDate] {
 
-    private val formatter = DateTimeFormatter.ofPattern("uuuu-MM-dd").withResolverStyle(ResolverStyle.STRICT)
+      private val formatter = DateTimeFormatter.ofPattern("uuuu-MM-dd").withResolverStyle(ResolverStyle.STRICT)
 
-    override def bind(key: String, value: String): Either[String, LocalDate] = {
-      for {
-        dateString <- stringBinder.bind(key, value).right
-        date <- Try(LocalDate.parse(dateString, formatter)).toOption.toRight(s"Cannot parse date: $dateString").right
-      } yield date
+      override def bind(key: String, value: String): Either[String, LocalDate] =
+        for {
+          dateString <- stringBinder.bind(key, value).right
+          date       <- Try(LocalDate.parse(dateString, formatter)).toOption.toRight(s"Cannot parse date: $dateString").right
+        } yield date
+
+      override def unbind(key: String, localDate: LocalDate): String =
+        localDate.toString
     }
-
-    override def unbind(key: String, localDate: LocalDate): String = {
-      localDate.toString
-    }
-  }
 }

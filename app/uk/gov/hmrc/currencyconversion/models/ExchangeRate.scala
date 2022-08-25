@@ -21,40 +21,39 @@ import play.api.libs.json.{Json, OWrites, Reads, __}
 
 import java.time.LocalDate
 
-
 case class ExchangeRate(
-                         validFrom: LocalDate,
-                         validTo: LocalDate,
-                         currencyCode: String,
-                         exchangeRate: BigDecimal,
-                         currencyName: String
-                       )
+  validFrom: LocalDate,
+  validTo: LocalDate,
+  currencyCode: String,
+  exchangeRate: BigDecimal,
+  currencyName: String
+)
 
 object ExchangeRate {
 
   implicit lazy val reads: Reads[ExchangeRate] = (
     (__ \ "validFrom").read[LocalDate] and
-      (__ \"validTo").read[LocalDate] and
+      (__ \ "validTo").read[LocalDate] and
       (__ \ "currencyCode").read[String] and
       (__ \ "exchangeRate").read[BigDecimal] and
       (__ \ "currencyName").read[String]
-    )(ExchangeRate.apply _)
+  )(ExchangeRate.apply _)
 
   implicit lazy val writes: OWrites[ExchangeRate] = Json.writes[ExchangeRate]
 }
 case class ExchangeRateData(
-                             timestamp: String,
-                             correlationId: String,
-                             exchangeData: Seq[ExchangeRate]
-                           )
+  timestamp: String,
+  correlationId: String,
+  exchangeData: Seq[ExchangeRate]
+)
 
 object ExchangeRateData {
 
   implicit lazy val reads: Reads[ExchangeRateData] = (
-    (__  \ "timestamp").read[String] and
-      (__  \"correlationid").read[String] and
-      (__  \ "exchangeRates").readWithDefault[Seq[ExchangeRate]](Seq.empty)
-    )(ExchangeRateData.apply _)
+    (__ \ "timestamp").read[String] and
+      (__ \ "correlationid").read[String] and
+      (__ \ "exchangeRates").readWithDefault[Seq[ExchangeRate]](Seq.empty)
+  )(ExchangeRateData.apply _)
 
   implicit lazy val writes: OWrites[ExchangeRateData] = Json.writes[ExchangeRateData]
 }
