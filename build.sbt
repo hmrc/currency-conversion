@@ -31,7 +31,7 @@ lazy val microservice = Project(appName, file("."))
 lazy val silencerSettings: Seq[Setting[_]] = {
 
   val paramValueNeverUsed: Regex = """^(parameter value)(.*)(is never used)$""".r
-  val unusedImports: Regex = """^(Unused import*)$""".r
+  val unusedImports: Regex       = """^(Unused import*)$""".r
 
   val silencerVersion = "1.7.9"
   Seq(
@@ -49,3 +49,6 @@ lazy val silencerSettings: Seq[Setting[_]] = {
     scalacOptions += s"-P:silencer:sourceRoots=${baseDirectory.value.getCanonicalPath}"
   )
 }
+
+addCommandAlias("scalafmtAll", "all scalafmtSbt scalafmt test:scalafmt")
+addCommandAlias("scalastyleAll", "all scalastyle test:scalastyle")

@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.currencyconversion.workers
 
-
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.mockito.Mockito.doReturn
 import org.scalatest.OptionValues
@@ -36,30 +35,35 @@ import scala.concurrent.Future
 import scala.language.postfixOps
 import scala.util.{Failure, Try}
 
-class XrsExchangeRateRequestWorkerSpec extends AnyWordSpec with Matchers
-  with ScalaFutures with IntegrationPatience with OptionValues with MockitoSugar with WireMockHelper with Eventually {
+class XrsExchangeRateRequestWorkerSpec
+    extends AnyWordSpec
+    with Matchers
+    with ScalaFutures
+    with IntegrationPatience
+    with OptionValues
+    with MockitoSugar
+    with WireMockHelper
+    with Eventually {
 
   lazy val builder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
     .configure(
       "workers.xrs-exchange-rate.interval" -> "1 second",
-      "microservice.services.des.port" -> server.port()
+      "microservice.services.des.port"     -> server.port()
     )
 
   private val mockedJsonResponse =
     """{"timestamp":"2021-06-15T15:41:38Z",
       |"correlationid":"72a89d23-0fc6-4212-92fc-ea8b05139c76",
-      |"exchangeRates":[{"validFrom":"2021-06-15","validTo":"2021-06-15","currencyCode":"ARS","exchangeRate":133.25,"currencyName":"Peso"}]}"""
-      .stripMargin
+      |"exchangeRates":[{"validFrom":"2021-06-15","validTo":"2021-06-15","currencyCode":"ARS","exchangeRate":133.25,"currencyName":"Peso"}]}""".stripMargin
 
   private val mockedEmptyExchangeRatesJsonResponse =
     """{"timestamp":"2021-06-15T15:41:38Z",
       |"correlationid":"72a89d23-0fc6-4212-92fc-ea8b05139c76"
-      |}"""
-      .stripMargin
+      |}""".stripMargin
 
-  private val thisMonth: LocalDate = LocalDate.now.withDayOfMonth(1)
-  private val lastMonth: LocalDate = LocalDate.now.minusMonths(1)
-  private val nextMonth: LocalDate = LocalDate.now.plusMonths(1)
+  private val thisMonth: LocalDate   = LocalDate.now.withDayOfMonth(1)
+  private val lastMonth: LocalDate   = LocalDate.now.minusMonths(1)
+  private val nextMonth: LocalDate   = LocalDate.now.plusMonths(1)
   private val inTwoMonths: LocalDate = LocalDate.now.plusMonths(2)
 
   "must call the xrs exchange rate service and receive the response" in {
@@ -74,7 +78,7 @@ class XrsExchangeRateRequestWorkerSpec extends AnyWordSpec with Matchers
 
       val workerResponse = worker.tap.pull.futureValue.value
       workerResponse.status shouldBe OK
-      workerResponse.body shouldBe mockedJsonResponse
+      workerResponse.body   shouldBe mockedJsonResponse
     }
 
   }
@@ -122,7 +126,7 @@ class XrsExchangeRateRequestWorkerSpec extends AnyWordSpec with Matchers
 
       val workerResponse = worker.tap.pull.futureValue.value
       workerResponse.status shouldBe OK
-      workerResponse.body shouldBe mockedEmptyExchangeRatesJsonResponse
+      workerResponse.body   shouldBe mockedEmptyExchangeRatesJsonResponse
     }
   }
 
@@ -133,13 +137,13 @@ class XrsExchangeRateRequestWorkerSpec extends AnyWordSpec with Matchers
       post(urlEqualTo("/passengers/exchangerequest/xrs/getexchangerate/v1"))
         .willReturn(aResponse().withStatus(OK).withBody(invalidJsonResponse))
     )
-    val app = builder.build()
+    val app                 = builder.build()
     running(app) {
       val worker = app.injector.instanceOf[XrsExchangeRateRequestWorker]
 
       val workerResponse = worker.tap.pull.futureValue.value
       workerResponse.status shouldBe OK
-      workerResponse.body shouldBe invalidJsonResponse
+      workerResponse.body   shouldBe invalidJsonResponse
     }
 
   }
@@ -151,55 +155,75 @@ class XrsExchangeRateRequestWorkerSpec extends AnyWordSpec with Matchers
       post(urlEqualTo("/passengers/exchangerequest/xrs/getexchangerate/v1"))
         .willReturn(aResponse().withStatus(OK).withBody(invalidJsonResponse))
     )
-    val app = builder.build()
+    val app                 = builder.build()
     running(app) {
       val worker = app.injector.instanceOf[XrsExchangeRateRequestWorker]
 
       val workerResponse = worker.tap.pull.futureValue.value
       workerResponse.status shouldBe OK
-      workerResponse.body shouldBe invalidJsonResponse
+      workerResponse.body   shouldBe invalidJsonResponse
     }
 
   }
 
   "areRatesForNextMonth is true if all validFrom dates start next month" in {
-    val exchangeRateData: ExchangeRateData = ExchangeRateData("", "",
-      Seq(ExchangeRate(nextMonth, inTwoMonths, "UDS", BigDecimal(0.75d), "US Dollars"),
-        ExchangeRate(nextMonth, inTwoMonths, "EU", BigDecimal(0.95d), "Euro")))
+    val exchangeRateData: ExchangeRateData = ExchangeRateData(
+      "",
+      "",
+      Seq(
+        ExchangeRate(nextMonth, inTwoMonths, "UDS", BigDecimal(0.75d), "US Dollars"),
+        ExchangeRate(nextMonth, inTwoMonths, "EU", BigDecimal(0.95d), "Euro")
+      )
+    )
 
     val rateRequest = new XrsExchangeRateRequest {}
-    rateRequest.areRatesForNextMonth(exchangeRateData) shouldBe (true)
+    rateRequest.areRatesForNextMonth(exchangeRateData) shouldBe true
   }
 
   "areRatesForNextMonth is false if validFrom dates have a mixture that start next month and valid from this month" in {
-    val exchangeRateData: ExchangeRateData = ExchangeRateData("", "",
-      Seq(ExchangeRate(nextMonth, inTwoMonths, "UDS", BigDecimal(0.75d), "US Dollars"),
-        ExchangeRate(thisMonth, nextMonth, "EU", BigDecimal(0.95d), "Euro")))
+    val exchangeRateData: ExchangeRateData = ExchangeRateData(
+      "",
+      "",
+      Seq(
+        ExchangeRate(nextMonth, inTwoMonths, "UDS", BigDecimal(0.75d), "US Dollars"),
+        ExchangeRate(thisMonth, nextMonth, "EU", BigDecimal(0.95d), "Euro")
+      )
+    )
 
     val rateRequest = new XrsExchangeRateRequest {}
-    rateRequest.areRatesForNextMonth(exchangeRateData) shouldBe (false)
+    rateRequest.areRatesForNextMonth(exchangeRateData) shouldBe false
   }
 
   "areRatesForNextMonth is false if all validFrom dates start this month" in {
-    val exchangeRateData: ExchangeRateData = ExchangeRateData("", "",
-      Seq(ExchangeRate(thisMonth, nextMonth, "UDS", BigDecimal(0.75d), "US Dollars"),
-        ExchangeRate(thisMonth, nextMonth, "EU", BigDecimal(0.95d), "Euro")))
+    val exchangeRateData: ExchangeRateData = ExchangeRateData(
+      "",
+      "",
+      Seq(
+        ExchangeRate(thisMonth, nextMonth, "UDS", BigDecimal(0.75d), "US Dollars"),
+        ExchangeRate(thisMonth, nextMonth, "EU", BigDecimal(0.95d), "Euro")
+      )
+    )
 
     val rateRequest = new XrsExchangeRateRequest {}
-    rateRequest.areRatesForNextMonth(exchangeRateData) shouldBe (false)
+    rateRequest.areRatesForNextMonth(exchangeRateData) shouldBe false
   }
 
   "areRatesForNextMonth is false if all validFrom dates are for last month" in {
-    val exchangeRateData: ExchangeRateData = ExchangeRateData("", "",
-      Seq(ExchangeRate(lastMonth, lastMonth, "UDS", BigDecimal(0.75d), "US Dollars"),
-        ExchangeRate(lastMonth, lastMonth, "EU", BigDecimal(0.95d), "Euro")))
+    val exchangeRateData: ExchangeRateData = ExchangeRateData(
+      "",
+      "",
+      Seq(
+        ExchangeRate(lastMonth, lastMonth, "UDS", BigDecimal(0.75d), "US Dollars"),
+        ExchangeRate(lastMonth, lastMonth, "EU", BigDecimal(0.95d), "Euro")
+      )
+    )
 
     val rateRequest = new XrsExchangeRateRequest {}
-    rateRequest.areRatesForNextMonth(exchangeRateData) shouldBe (false)
+    rateRequest.areRatesForNextMonth(exchangeRateData) shouldBe false
   }
 
   "when data not present for next month return false" in {
-    val rateRequest = new XrsExchangeRateRequest {
+    val rateRequest                = new XrsExchangeRateRequest {
       override private[workers] def now = LocalDate.of(2022, 6, 26)
     }
     val mockExchangeRateRepository = mock[ExchangeRateRepository]
@@ -208,7 +232,7 @@ class XrsExchangeRateRequestWorkerSpec extends AnyWordSpec with Matchers
   }
 
   "when data is present for next month return true" in {
-    val rateRequest = new XrsExchangeRateRequest {
+    val rateRequest                = new XrsExchangeRateRequest {
       override private[workers] def now = LocalDate.of(2022, 6, 26)
     }
     val mockExchangeRateRepository = mock[ExchangeRateRepository]
@@ -221,34 +245,35 @@ class XrsExchangeRateRequestWorkerSpec extends AnyWordSpec with Matchers
       val rateRequest = new XrsExchangeRateRequest {
         override private[workers] def now = LocalDate.of(2022, 6, 26)
       }
-      rateRequest.checkNextMonthsFileIsReceivedDaysBeforeEndOfMonth shouldBe (true)
+      rateRequest.checkNextMonthsFileIsReceivedDaysBeforeEndOfMonth shouldBe true
     }
 
     "when not within range to check if next months file has been received return false" in {
       val rateRequest = new XrsExchangeRateRequest {
         override private[workers] def now = LocalDate.of(2022, 6, 25)
       }
-      rateRequest.checkNextMonthsFileIsReceivedDaysBeforeEndOfMonth shouldBe (false)
+      rateRequest.checkNextMonthsFileIsReceivedDaysBeforeEndOfMonth shouldBe false
     }
   }
 
   "verifyExchangeDataIsNotEmpty" should {
 
     "is true when data is not empty" in {
-      val exchangeRateData: ExchangeRateData = ExchangeRateData("", "",
-        Seq(ExchangeRate(nextMonth, inTwoMonths, "UDS", BigDecimal(0.75d), "US Dollars"),
-          ExchangeRate(nextMonth, inTwoMonths, "EU", BigDecimal(0.95d), "Euro")))
-      val rateRequest = new XrsExchangeRateRequest {
-
-      }
+      val exchangeRateData: ExchangeRateData = ExchangeRateData(
+        "",
+        "",
+        Seq(
+          ExchangeRate(nextMonth, inTwoMonths, "UDS", BigDecimal(0.75d), "US Dollars"),
+          ExchangeRate(nextMonth, inTwoMonths, "EU", BigDecimal(0.95d), "Euro")
+        )
+      )
+      val rateRequest                        = new XrsExchangeRateRequest {}
       rateRequest.verifyExchangeDataIsNotEmpty(Try(exchangeRateData)) shouldBe true
     }
 
     "is false when data is empty" in {
       val exchangeRateData: ExchangeRateData = ExchangeRateData("", "", Seq())
-      val rateRequest = new XrsExchangeRateRequest {
-
-      }
+      val rateRequest                        = new XrsExchangeRateRequest {}
       rateRequest.verifyExchangeDataIsNotEmpty(Try(exchangeRateData)) shouldBe false
     }
 

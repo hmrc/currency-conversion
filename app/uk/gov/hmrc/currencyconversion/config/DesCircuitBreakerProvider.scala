@@ -25,8 +25,8 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
 @Singleton
-class DesCircuitBreakerProvider @Inject()(config: Configuration)
-                                         (implicit ec: ExecutionContext, sys: ActorSystem) extends Provider[CircuitBreaker] {
+class DesCircuitBreakerProvider @Inject() (config: Configuration)(implicit ec: ExecutionContext, sys: ActorSystem)
+    extends Provider[CircuitBreaker] {
 
   private val maxFailures  = config.get[Int]("microservice.services.des.circuit-breaker.max-failures")
   private val callTimeout  = config.get[FiniteDuration]("microservice.services.des.circuit-breaker.call-timeout")
@@ -34,9 +34,9 @@ class DesCircuitBreakerProvider @Inject()(config: Configuration)
 
   override def get(): CircuitBreaker =
     new CircuitBreaker(
-      scheduler    = sys.scheduler,
-      maxFailures  = maxFailures,
-      callTimeout  = callTimeout,
+      scheduler = sys.scheduler,
+      maxFailures = maxFailures,
+      callTimeout = callTimeout,
       resetTimeout = resetTimeout
     )
 }

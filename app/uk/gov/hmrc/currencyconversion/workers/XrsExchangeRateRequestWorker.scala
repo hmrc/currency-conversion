@@ -39,76 +39,81 @@ import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 @Singleton
-class XrsExchangeRateRequestWorker @Inject()(
-                                              config: Configuration,
-                                              hodConnector: HODConnector,
-                                              writeExchangeRateRepository: ExchangeRateRepository,
-                                              xrsDelayHelper: XrsDelayHelper
-                                            )(implicit mat: Materializer, ec: ExecutionContext) extends XrsExchangeRateRequest {
+class XrsExchangeRateRequestWorker @Inject() (
+  config: Configuration,
+  hodConnector: HODConnector,
+  writeExchangeRateRepository: ExchangeRateRepository,
+  xrsDelayHelper: XrsDelayHelper
+)(implicit mat: Materializer, ec: ExecutionContext)
+    extends XrsExchangeRateRequest {
 
-  private val initialDelayFromConfig = config.get[String]("workers.xrs-exchange-rate.initial-delay").replace('.', ' ')
-  private val parallelism = config.get[String]("workers.xrs-exchange-rate.parallelism").replace('.', ' ')
-  private val initialDelayFromConfigFiniteDuration = config.get[FiniteDuration]("workers.xrs-exchange-rate.initial-delay")
-  private val finiteInitialDelay = Duration(initialDelayFromConfig)
-  private val initialDelay = Some(finiteInitialDelay).collect { case d: FiniteDuration => d }.getOrElse(initialDelayFromConfigFiniteDuration)
-  private val scheduledTime: Boolean = config.get[Boolean]("workers.xrs-exchange-rate.scheduled-time")
+  private val initialDelayFromConfig               = config.get[String]("workers.xrs-exchange-rate.initial-delay").replace('.', ' ')
+  private val parallelism                          = config.get[String]("workers.xrs-exchange-rate.parallelism").replace('.', ' ')
+  private val initialDelayFromConfigFiniteDuration =
+    config.get[FiniteDuration]("workers.xrs-exchange-rate.initial-delay")
+  private val finiteInitialDelay                   = Duration(initialDelayFromConfig)
+  private val initialDelay                         =
+    Some(finiteInitialDelay).collect { case d: FiniteDuration => d }.getOrElse(initialDelayFromConfigFiniteDuration)
+  private val scheduledTime: Boolean               = config.get[Boolean]("workers.xrs-exchange-rate.scheduled-time")
 
-  private val intervalFromConfig = config.get[String]("workers.xrs-exchange-rate.interval").replace('.', ' ')
-  private val intervalFromConfigFiniteDuration = config.get[FiniteDuration]("workers.xrs-exchange-rate.interval")
-  override protected val daysBeforeNextMonthToAlertForNextMonthsFile: Int = config.get[Int]("workers.xrs-exchange-rate.next-month-alert-days")
-  private val finiteInterval = Duration(intervalFromConfig)
-  private val interval = Some(finiteInterval).collect { case d: FiniteDuration => d }.getOrElse(intervalFromConfigFiniteDuration)
+  private val intervalFromConfig                                          = config.get[String]("workers.xrs-exchange-rate.interval").replace('.', ' ')
+  private val intervalFromConfigFiniteDuration                            = config.get[FiniteDuration]("workers.xrs-exchange-rate.interval")
+  override protected val daysBeforeNextMonthToAlertForNextMonthsFile: Int =
+    config.get[Int]("workers.xrs-exchange-rate.next-month-alert-days")
+  private val finiteInterval                                              = Duration(intervalFromConfig)
+  private val interval                                                    =
+    Some(finiteInterval).collect { case d: FiniteDuration => d }.getOrElse(intervalFromConfigFiniteDuration)
 
-  private val supervisionStrategy: Supervision.Decider = {
+  private val supervisionStrategy: Supervision.Decider                    = {
     case NonFatal(_) => Supervision.resume
-    case _ => Supervision.stop
+    case _           => Supervision.stop
   }
 
-  val tap: SinkQueueWithCancel[HttpResponse] = {
-    Source.tick(xrsDelayHelper.calculateInitialDelay(scheduledTime, initialDelay), interval, Tick())
-      .mapAsync(allCatch.opt(parallelism.toInt).getOrElse(1)) {
-        _ =>
-          val response = hodConnector.submit().flatMap {
-            case response: HttpResponse if is2xx(response.status) =>
-              successfulResponse(response)
-            case response: HttpResponse if is4xx(response.status) =>
-              logger.error(s"XRS_BAD_REQUEST_FROM_EIS_ERROR  [XrsExchangeRateRequestWorker] call to DES (EIS) is failed. ${response.toString}")
-              Future.successful(response)
-            case _ => logger.error(s"XRS_BAD_REQUEST_FROM_EIS_ERROR [XrsExchangeRateRequestWorker] BAD Request is received from DES (EIS)")
-              Future.successful(HttpResponse(SERVICE_UNAVAILABLE, "Service Unavailable"))
-          }
-          if (checkNextMonthsFileIsReceivedDaysBeforeEndOfMonth) {
-            isNextMonthsFileIsReceived(writeExchangeRateRepository)
-          }
-          response
+  val tap: SinkQueueWithCancel[HttpResponse] =
+    Source
+      .tick(xrsDelayHelper.calculateInitialDelay(scheduledTime, initialDelay), interval, Tick())
+      .mapAsync(allCatch.opt(parallelism.toInt).getOrElse(1)) { _ =>
+        val response = hodConnector.submit().flatMap {
+          case response: HttpResponse if is2xx(response.status) =>
+            successfulResponse(response)
+          case response: HttpResponse if is4xx(response.status) =>
+            logger.error(
+              s"XRS_BAD_REQUEST_FROM_EIS_ERROR  [XrsExchangeRateRequestWorker] call to DES (EIS) is failed. ${response.toString}"
+            )
+            Future.successful(response)
+          case _                                                =>
+            logger.error(
+              s"XRS_BAD_REQUEST_FROM_EIS_ERROR [XrsExchangeRateRequestWorker] BAD Request is received from DES (EIS)"
+            )
+            Future.successful(HttpResponse(SERVICE_UNAVAILABLE, "Service Unavailable"))
+        }
+        if (checkNextMonthsFileIsReceivedDaysBeforeEndOfMonth) {
+          isNextMonthsFileIsReceived(writeExchangeRateRepository)
+        }
+        response
       }
       .wireTapMat(Sink.queue())(Keep.right)
       .toMat(Sink.ignore)(Keep.left)
       .withAttributes(ActorAttributes.supervisionStrategy(supervisionStrategy))
       .run()
-  }
 
   private def successfulResponse(response: HttpResponse) = {
-    getResponseJson(response).map {
-      exchangeRatesJson =>
-        val triedData = Try(exchangeRatesJson.as[ExchangeRateData])
-        if (verifyExchangeDataIsNotEmpty(triedData)) {
-          writeExchangeRateRepository.insertOrUpdate(exchangeRatesJson, areRatesForNextMonth(triedData.get))
-        }
+    getResponseJson(response).map { exchangeRatesJson =>
+      val triedData = Try(exchangeRatesJson.as[ExchangeRateData])
+      if (verifyExchangeDataIsNotEmpty(triedData)) {
+        writeExchangeRateRepository.insertOrUpdate(exchangeRatesJson, areRatesForNextMonth(triedData.get))
+      }
     }
     Future.successful(response)
   }
 
-  private def getResponseJson(response: HttpResponse) = {
+  private def getResponseJson(response: HttpResponse) =
     Try {
       response.json.as[JsObject]
-    } recoverWith {
-      case e: Throwable =>
-        logger.error("[XrsExchangeRateRequestWorker] [getResponseJson] Cannot convert response to JSON")
-        Failure(e)
+    } recoverWith { case e: Throwable =>
+      logger.error("[XrsExchangeRateRequestWorker] [getResponseJson] Cannot convert response to JSON")
+      Failure(e)
     }
-  }
-
 
 }
 
@@ -118,38 +123,48 @@ trait XrsExchangeRateRequest {
 
   protected val daysBeforeNextMonthToAlertForNextMonthsFile: Int = 5
 
-  private[workers] def checkNextMonthsFileIsReceivedDaysBeforeEndOfMonth = {
+  private[workers] def checkNextMonthsFileIsReceivedDaysBeforeEndOfMonth =
     now.plusDays(daysBeforeNextMonthToAlertForNextMonthsFile).getMonthValue != now.getMonthValue
-  }
 
   private[workers] def areRatesForNextMonth(exchangeRateData: ExchangeRateData): Boolean = {
 
-    val totalRates = exchangeRateData.exchangeData.size
+    val totalRates      = exchangeRateData.exchangeData.size
     val nextMonthsRates = exchangeRateData.exchangeData.count(ed => ed.validFrom.isAfter(now.`with`(lastDayOfMonth())))
-    val expiredRates = exchangeRateData.exchangeData.count(ed => ed.validTo.isBefore(now))
+    val expiredRates    = exchangeRateData.exchangeData.count(ed => ed.validTo.isBefore(now))
 
-    logger.info(s"[XrsExchangeRateRequest][areRatesForNextMonth] " +
-      s"total rates=$totalRates, next months rates=$nextMonthsRates, expired rates=$expiredRates")
+    logger.info(
+      s"[XrsExchangeRateRequest][areRatesForNextMonth] " +
+        s"total rates=$totalRates, next months rates=$nextMonthsRates, expired rates=$expiredRates"
+    )
 
     if (nextMonthsRates > 0 && totalRates != nextMonthsRates) {
-      logger.error(s"XRS_FILE_HAS_MIXED_MONTHS_ERROR [XrsExchangeRateRequest][areRatesForNextMonth] Exchange rates file has a mixture of months. " +
-        s"Total rates=$totalRates, next months rates=$nextMonthsRates, expired rates=$expiredRates.")
+      logger.error(
+        s"XRS_FILE_HAS_MIXED_MONTHS_ERROR [XrsExchangeRateRequest][areRatesForNextMonth] Exchange rates file has a mixture of months. " +
+          s"Total rates=$totalRates, next months rates=$nextMonthsRates, expired rates=$expiredRates."
+      )
     }
 
     if (totalRates == nextMonthsRates) {
-      logger.error("XRS_FILE_DETECTED_FOR_NEXT_MONTH [XrsExchangeRateRequest][areRatesForNextMonth] Inserting XRS file for next month")
+      logger.error(
+        "XRS_FILE_DETECTED_FOR_NEXT_MONTH [XrsExchangeRateRequest][areRatesForNextMonth] Inserting XRS file for next month"
+      )
     }
     totalRates == nextMonthsRates
   }
 
-  private[workers] def isNextMonthsFileIsReceived(writeExchangeRateRepository: ExchangeRateRepository)(implicit ec: ExecutionContext): Future[Boolean] = {
+  private[workers] def isNextMonthsFileIsReceived(
+    writeExchangeRateRepository: ExchangeRateRepository
+  )(implicit ec: ExecutionContext): Future[Boolean] = {
 
-    val fileName = currentFileName(now.plusMonths(1))
+    val fileName  = currentFileName(now.plusMonths(1))
     val isPresent = writeExchangeRateRepository.isDataPresent(fileName)
 
     isPresent.map {
-      case true => logger.info(s"[XrsExchangeRateRequest] [verifyIfNextMonthsFileIsReceived] $fileName exists")
-      case false => logger.error(s"XRS_FILE_NEXT_MONTH_NOT_RECEIVED [XrsExchangeRateRequest] [verifyIfNextMonthsFileIsReceived] $fileName")
+      case true  => logger.info(s"[XrsExchangeRateRequest] [verifyIfNextMonthsFileIsReceived] $fileName exists")
+      case false =>
+        logger.error(
+          s"XRS_FILE_NEXT_MONTH_NOT_RECEIVED [XrsExchangeRateRequest] [verifyIfNextMonthsFileIsReceived] $fileName"
+        )
     }
 
     isPresent
@@ -159,22 +174,24 @@ trait XrsExchangeRateRequest {
     exchangeRateDataTry match {
       case Success(exchangeRateData) =>
         if (exchangeRateData.exchangeData.isEmpty) {
-          logger.error("XRS_EMPTY_RATES_FILE_ERROR [XrsExchangeRateRequestWorker] [verifyExchangeDataIsNotEmpty] Exchange Data size is 0")
+          logger.error(
+            "XRS_EMPTY_RATES_FILE_ERROR [XrsExchangeRateRequestWorker] [verifyExchangeDataIsNotEmpty] Exchange Data size is 0"
+          )
         } else {
-          logger.info(s"[XrsExchangeRateRequestWorker] [verifyExchangeDataIsNotEmpty] " +
-            s"Exchange Data size is ${
-              exchangeRateData.exchangeData.size
-            } with timestamp ${
-              exchangeRateData.timestamp
-            }")
+          logger.info(
+            s"[XrsExchangeRateRequestWorker] [verifyExchangeDataIsNotEmpty] " +
+              s"Exchange Data size is ${exchangeRateData.exchangeData.size} with timestamp ${exchangeRateData.timestamp}"
+          )
         }
         exchangeRateData.exchangeData.nonEmpty
-      case Failure(exception) =>
-        logger.error("XRS_RATES_FILE_INVALID_FORMAT [XrsExchangeRateRequestWorker] [verifyExchangeDataIsNotEmpty] " +
-          "Cannot convert response JSON to ExchangeRateData", exception)
+      case Failure(exception)        =>
+        logger.error(
+          "XRS_RATES_FILE_INVALID_FORMAT [XrsExchangeRateRequestWorker] [verifyExchangeDataIsNotEmpty] " +
+            "Cannot convert response JSON to ExchangeRateData",
+          exception
+        )
         false
     }
 }
 
 case class Tick()
-

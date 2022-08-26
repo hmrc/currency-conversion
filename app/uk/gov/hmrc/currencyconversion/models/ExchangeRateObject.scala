@@ -32,7 +32,7 @@ object ExchangeRateObject {
     (
       (__ \ "_id").read[String] and
         (__ \ "exchangeRateData").read[JsObject]
-      )(ExchangeRateObject.apply _)
+    )(ExchangeRateObject.apply _)
   }
 
   implicit lazy val writes: OWrites[ExchangeRateObject] = {
@@ -42,9 +42,8 @@ object ExchangeRateObject {
     (
       (__ \ "_id").write[String] and
         (__ \ "exchangeRateData").write[JsObject]
-      )(unlift(ExchangeRateObject.unapply))
+    )(unlift(ExchangeRateObject.unapply))
   }
-
 
   implicit val format: OFormat[ExchangeRateObject] = OFormat(
     reads,

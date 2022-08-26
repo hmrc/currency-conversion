@@ -30,9 +30,10 @@ import scala.concurrent.ExecutionContext
 
 @Singleton()
 class ExchangeRateController @Inject() (
-              exchangeRatesService: ExchangeRateService,
-              controllerComponents: ControllerComponents
-            ) (implicit ec: ExecutionContext) extends BackendController(controllerComponents) {
+  exchangeRatesService: ExchangeRateService,
+  controllerComponents: ControllerComponents
+)(implicit ec: ExecutionContext)
+    extends BackendController(controllerComponents) {
 
   def getRatesByCurrencyCode(cc: List[String], date: LocalDate): Action[AnyContent] = Action.async {
 
@@ -42,11 +43,12 @@ class ExchangeRateController @Inject() (
       val rates = exchangeRateResults.map(_.rate)
 
       if (exchangeRateResults.exists(result => result.isInstanceOf[ExchangeRateOldFileResult])) {
-        logger.error("XRS_FILE_NOT_AVAILABLE_ERROR [ExchangeRateController] [getRatesByCurrencyCode] Using older " +
-          "XRS file as XRS file for supplied date could not be found...")
+        logger.error(
+          "XRS_FILE_NOT_AVAILABLE_ERROR [ExchangeRateController] [getRatesByCurrencyCode] Using older " +
+            "XRS file as XRS file for supplied date could not be found..."
+        )
         Ok(Json.toJson(rates)).withHeaders(WARNING -> s"""299 - "Date out of range" "$dateTime"""")
-      }
-      else {
+      } else {
         Ok(Json.toJson(rates))
       }
     }
@@ -55,7 +57,7 @@ class ExchangeRateController @Inject() (
   def getCurrenciesByDate(date: LocalDate): Action[AnyContent] = Action.async {
     exchangeRatesService.getCurrencies(date).map {
       case Some(cp) => Ok(Json.toJson(cp))
-      case None => NotFound
+      case None     => NotFound
     }
   }
 }

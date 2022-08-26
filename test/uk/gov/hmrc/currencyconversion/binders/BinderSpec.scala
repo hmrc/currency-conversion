@@ -23,12 +23,10 @@ import org.scalatest.wordspec.AnyWordSpec
 
 import java.time.LocalDate
 
-
 class BinderSpec extends AnyWordSpec with Matchers with TestSuite with BeforeAndAfterEach {
 
-  override def beforeEach(): Unit = {
+  override def beforeEach(): Unit =
     SharedMetricRegistries.clear()
-  }
 
   "Calling bindableDate.bind" should {
 

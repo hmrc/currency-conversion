@@ -31,38 +31,40 @@ import play.api.test.Helpers._
 import play.api.test.Injecting
 import uk.gov.hmrc.currencyconversion.utils.WireMockHelper
 
-class HODConnectorSpec extends AnyFreeSpec with Matchers with GuiceOneAppPerSuite with WireMockHelper
-with ScalaFutures with IntegrationPatience with Injecting with BeforeAndAfterEach {
+class HODConnectorSpec
+    extends AnyFreeSpec
+    with Matchers
+    with GuiceOneAppPerSuite
+    with WireMockHelper
+    with ScalaFutures
+    with IntegrationPatience
+    with Injecting
+    with BeforeAndAfterEach {
 
-  override def beforeEach(): Unit = {
+  override def beforeEach(): Unit =
     SharedMetricRegistries.clear()
-  }
 
-  override lazy val app: Application = {
+  override lazy val app: Application =
     new GuiceApplicationBuilder()
       .configure(
-        "microservice.services.des.port"                    -> server.port(),
+        "microservice.services.des.port"                          -> server.port(),
         "microservice.services.des.circuit-breaker.max-failures"  -> 1,
         "microservice.services.des.circuit-breaker.reset-timeout" -> "1 second"
       )
       .build()
-  }
 
   private lazy val connector: HODConnector = inject[HODConnector]
 
   private def stubCall: MappingBuilder =
     post(urlEqualTo("/passengers/exchangerequest/xrs/getexchangerate/v1"))
 
-
   "hod connector" - {
 
     "must call the HOD when xrs worker thread is started" in {
 
-
       server.stubFor(
         stubCall
           .willReturn(aResponse().withStatus(OK))
-
       )
       connector.submit().futureValue.status mustBe OK
     }
