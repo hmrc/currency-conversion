@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,11 @@ package uk.gov.hmrc.currencyconversion.workers
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.mockito.Mockito.doReturn
+import org.mockito.MockitoSugar.mock
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import org.scalatestplus.mockito.MockitoSugar
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import uk.gov.hmrc.currencyconversion.models.{ExchangeRate, ExchangeRateData}
@@ -32,7 +32,6 @@ import uk.gov.hmrc.currencyconversion.utils.WireMockHelper
 import java.time.LocalDate
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.language.postfixOps
 import scala.util.{Failure, Try}
 
 class XrsExchangeRateRequestWorkerSpec
@@ -41,7 +40,6 @@ class XrsExchangeRateRequestWorkerSpec
     with ScalaFutures
     with IntegrationPatience
     with OptionValues
-    with MockitoSugar
     with WireMockHelper
     with Eventually {
 
@@ -65,6 +63,9 @@ class XrsExchangeRateRequestWorkerSpec
   private val lastMonth: LocalDate   = LocalDate.now.minusMonths(1)
   private val nextMonth: LocalDate   = LocalDate.now.plusMonths(1)
   private val inTwoMonths: LocalDate = LocalDate.now.plusMonths(2)
+  private val year                   = 2022
+  private val dayOfMonth             = 26
+  private val month                  = 6
 
   "must call the xrs exchange rate service and receive the response" in {
 
@@ -76,7 +77,7 @@ class XrsExchangeRateRequestWorkerSpec
     running(app) {
       val worker = app.injector.instanceOf[XrsExchangeRateRequestWorker]
 
-      val workerResponse = worker.tap.pull.futureValue.value
+      val workerResponse = worker.tap.pull().futureValue.value
       workerResponse.status shouldBe OK
       workerResponse.body   shouldBe mockedJsonResponse
     }
@@ -93,7 +94,7 @@ class XrsExchangeRateRequestWorkerSpec
     running(app) {
       val worker = app.injector.instanceOf[XrsExchangeRateRequestWorker]
 
-      val workerResponse = worker.tap.pull.futureValue.value
+      val workerResponse = worker.tap.pull().futureValue.value
 
       workerResponse.status shouldBe SERVICE_UNAVAILABLE
     }
@@ -109,7 +110,7 @@ class XrsExchangeRateRequestWorkerSpec
     running(app) {
       val worker = app.injector.instanceOf[XrsExchangeRateRequestWorker]
 
-      val workerResponse = worker.tap.pull.futureValue.value
+      val workerResponse = worker.tap.pull().futureValue.value
       workerResponse.status shouldBe SERVICE_UNAVAILABLE
     }
   }
@@ -124,7 +125,7 @@ class XrsExchangeRateRequestWorkerSpec
     running(app) {
       val worker = app.injector.instanceOf[XrsExchangeRateRequestWorker]
 
-      val workerResponse = worker.tap.pull.futureValue.value
+      val workerResponse = worker.tap.pull().futureValue.value
       workerResponse.status shouldBe OK
       workerResponse.body   shouldBe mockedEmptyExchangeRatesJsonResponse
     }
@@ -141,7 +142,7 @@ class XrsExchangeRateRequestWorkerSpec
     running(app) {
       val worker = app.injector.instanceOf[XrsExchangeRateRequestWorker]
 
-      val workerResponse = worker.tap.pull.futureValue.value
+      val workerResponse = worker.tap.pull().futureValue.value
       workerResponse.status shouldBe OK
       workerResponse.body   shouldBe invalidJsonResponse
     }
@@ -159,7 +160,7 @@ class XrsExchangeRateRequestWorkerSpec
     running(app) {
       val worker = app.injector.instanceOf[XrsExchangeRateRequestWorker]
 
-      val workerResponse = worker.tap.pull.futureValue.value
+      val workerResponse = worker.tap.pull().futureValue.value
       workerResponse.status shouldBe OK
       workerResponse.body   shouldBe invalidJsonResponse
     }
@@ -224,7 +225,7 @@ class XrsExchangeRateRequestWorkerSpec
 
   "when data not present for next month return false" in {
     val rateRequest                = new XrsExchangeRateRequest {
-      override private[workers] def now = LocalDate.of(2022, 6, 26)
+      override private[workers] def now = LocalDate.of(year, month, dayOfMonth)
     }
     val mockExchangeRateRepository = mock[ExchangeRateRepository]
     doReturn(Future.successful(false)) when mockExchangeRateRepository isDataPresent "exrates-monthly-0722"
@@ -233,7 +234,7 @@ class XrsExchangeRateRequestWorkerSpec
 
   "when data is present for next month return true" in {
     val rateRequest                = new XrsExchangeRateRequest {
-      override private[workers] def now = LocalDate.of(2022, 6, 26)
+      override private[workers] def now = LocalDate.of(year, month, dayOfMonth)
     }
     val mockExchangeRateRepository = mock[ExchangeRateRepository]
     doReturn(Future.successful(true)) when mockExchangeRateRepository isDataPresent "exrates-monthly-0722"
@@ -243,14 +244,14 @@ class XrsExchangeRateRequestWorkerSpec
   "checkNextMonthsFileIsReceivedDaysBeforeEndOfMonth" should {
     "when within range to check if next months file has been received returns true" in {
       val rateRequest = new XrsExchangeRateRequest {
-        override private[workers] def now = LocalDate.of(2022, 6, 26)
+        override private[workers] def now = LocalDate.of(year, month, dayOfMonth)
       }
       rateRequest.checkNextMonthsFileIsReceivedDaysBeforeEndOfMonth shouldBe true
     }
 
     "when not within range to check if next months file has been received return false" in {
       val rateRequest = new XrsExchangeRateRequest {
-        override private[workers] def now = LocalDate.of(2022, 6, 25)
+        override private[workers] def now = LocalDate.of(year, month, dayOfMonth - 1)
       }
       rateRequest.checkNextMonthsFileIsReceivedDaysBeforeEndOfMonth shouldBe false
     }

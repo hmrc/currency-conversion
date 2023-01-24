@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,8 @@ import uk.gov.hmrc.currencyconversion.repositories.{DefaultExchangeRateRepositor
 class HmrcModule extends Module {
   override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] =
     Seq(
-      bind[ExchangeRateRepository].to[DefaultExchangeRateRepository].eagerly,
+      bind[ExchangeRateRepository].to[DefaultExchangeRateRepository].eagerly(),
       bind[CircuitBreaker].qualifiedWith("des").toProvider[DesCircuitBreakerProvider],
-      bind[XrsExchangeRateRequestWorker].toSelf.eagerly
+      bind[XrsExchangeRateRequestWorker].toSelf.eagerly()
     )
 }

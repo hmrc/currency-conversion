@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,11 @@
 package uk.gov.hmrc.currencyconversion.controllers
 
 import com.codahale.metrics.SharedMetricRegistries
-import org.mockito.Mockito
+import org.mockito.{Mockito, MockitoSugar}
 import org.mockito.Mockito.doReturn
+import org.mockito.MockitoSugar.mock
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
-import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.http.Status
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -34,7 +34,6 @@ import uk.gov.hmrc.currencyconversion.models.ExchangeRateObject
 
 import java.time.LocalDate
 import scala.concurrent.Future._
-import scala.language.postfixOps
 import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.mvc.Result
 

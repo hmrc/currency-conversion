@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,8 +30,8 @@ object DateBinder {
 
       override def bind(key: String, value: String): Either[String, LocalDate] =
         for {
-          dateString <- stringBinder.bind(key, value).right
-          date       <- Try(LocalDate.parse(dateString, formatter)).toOption.toRight(s"Cannot parse date: $dateString").right
+          dateString <- stringBinder.bind(key, value)
+          date       <- Try(LocalDate.parse(dateString, formatter)).toOption.toRight(s"Cannot parse date: $dateString")
         } yield date
 
       override def unbind(key: String, localDate: LocalDate): String =
