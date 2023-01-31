@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.currencyconversion.repositories
 
-import akka.stream.Materializer
 import play.api.i18n.Lang.logger.logger
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.OFormat.oFormatFromReadsAndOWrites
@@ -26,11 +25,9 @@ import uk.gov.hmrc.currencyconversion.utils.MongoIdHelper.currentFileName
 import java.time.LocalDate
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
-import scala.language.postfixOps
 
 class ConversionRatePeriodJson @Inject() (writeExchangeRateRepository: ExchangeRateRepository)(implicit
-  ec: ExecutionContext,
-  m: Materializer
+  ec: ExecutionContext
 ) extends ConversionRatePeriodRepository {
 
   def getExchangeRateFileName(date: LocalDate): Future[String] = {
