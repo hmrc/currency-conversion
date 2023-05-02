@@ -18,8 +18,6 @@ package uk.gov.hmrc.currencyconversion.controllers
 
 import com.codahale.metrics.SharedMetricRegistries
 import org.mockito.{Mockito, MockitoSugar}
-import org.mockito.Mockito.doReturn
-import org.mockito.MockitoSugar.mock
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
@@ -163,9 +161,9 @@ class ExchangeRateControllerSpec
   "Getting rates for a date which has no rates Json file and a valid currency code" must {
 
     "return 200 and the correct json" in {
-      doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-1019"
+      doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-1119"
 
-      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-10-10?cc=USD")).get
+      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-11-11?cc=USD")).get
 
       status(result) shouldBe Status.OK
 
@@ -180,8 +178,8 @@ class ExchangeRateControllerSpec
 
   "Getting rates for a date which has no rates Json file, 1 valid currency code and 1 invalid currency code" must {
     "return response from previous month" in {
-      doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-1019"
-      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-10-10?cc=USD&cc=INVALID")).get
+      doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-1119"
+      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-11-11?cc=USD&cc=INVALID")).get
 
       status(result) shouldBe Status.OK
     }
@@ -262,7 +260,7 @@ class ExchangeRateControllerSpec
       doReturn(Future.successful(true)) when exchangeRateRepository isDataPresent "exrates-monthly-0919"
       doReturn(successful(Some(exchangeRate))) when exchangeRateRepository get "exrates-monthly-0919"
 
-      val date = LocalDate.of(2019.toInt, 9.toInt, 22.toInt)
+      val date = LocalDate.of(2019, 9, 22)
 
       val result = route(app, FakeRequest("GET", s"/currency-conversion/currencies/$date")).get
 
