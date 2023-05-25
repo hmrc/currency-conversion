@@ -30,7 +30,6 @@ import uk.gov.hmrc.currencyconversion.repositories.ExchangeRateRepository
 import play.api.Application
 import uk.gov.hmrc.currencyconversion.models.ExchangeRateObject
 
-import java.time.LocalDate
 import scala.concurrent.Future._
 import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.mvc.Result
@@ -161,9 +160,9 @@ class ExchangeRateControllerSpec
   "Getting rates for a date which has no rates Json file and a valid currency code" must {
 
     "return 200 and the correct json" in {
-      doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-1119"
+      doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-1019"
 
-      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-11-11?cc=USD")).get
+      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-10-10?cc=USD")).get
 
       status(result) shouldBe Status.OK
 
@@ -178,8 +177,8 @@ class ExchangeRateControllerSpec
 
   "Getting rates for a date which has no rates Json file, 1 valid currency code and 1 invalid currency code" must {
     "return response from previous month" in {
-      doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-1119"
-      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-11-11?cc=USD&cc=INVALID")).get
+      doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-1019"
+      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-10-10?cc=USD&cc=INVALID")).get
 
       status(result) shouldBe Status.OK
     }
@@ -260,9 +259,7 @@ class ExchangeRateControllerSpec
       doReturn(Future.successful(true)) when exchangeRateRepository isDataPresent "exrates-monthly-0919"
       doReturn(successful(Some(exchangeRate))) when exchangeRateRepository get "exrates-monthly-0919"
 
-      val date = LocalDate.of(2019, 9, 22)
-
-      val result = route(app, FakeRequest("GET", s"/currency-conversion/currencies/$date")).get
+      val result = route(app, FakeRequest("GET", "/currency-conversion/currencies/2019-09-22")).get
 
       status(result) shouldBe Status.OK
 

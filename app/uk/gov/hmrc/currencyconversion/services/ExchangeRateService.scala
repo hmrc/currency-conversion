@@ -55,7 +55,7 @@ class ExchangeRateService @Inject() (exchangeRateRepository: ConversionRatePerio
                 )
             }
           case None      =>
-            exchangeRateRepository.getLatestConversionRatePeriod(date.minusMonths(2)).map { fallbackCrp =>
+            exchangeRateRepository.getLatestConversionRatePeriod(date.minusMonths(1)).map { fallbackCrp =>
               fallbackCrp.rates.get(currencyCode) match {
                 case Some(rate) =>
                   ExchangeRateOldFileResult(
@@ -85,7 +85,7 @@ class ExchangeRateService @Inject() (exchangeRateRepository: ConversionRatePerio
     exchangeRateRepository.getCurrencyPeriod(date).flatMap {
       case Some(value) => Future.successful(Some(value))
       case None        =>
-        val fallbackDate = date.minusMonths(2).`with`(lastDayOfMonth()) //lastDay of previous month
+        val fallbackDate = date.minusMonths(1).`with`(lastDayOfMonth()) //lastDay of previous month
         exchangeRateRepository.getCurrencyPeriod(fallbackDate)
     }
 
