@@ -20,19 +20,17 @@ import org.scalatest.matchers.must.Matchers._
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-import java.time.{LocalDate, Month}
+import java.time.LocalDate
 
 class MongoIdHelperSpec extends AnyWordSpec with Matchers {
-  private val jan2011 = LocalDate.of(2011, Month.JANUARY, 12)
-  private val dec2018 = LocalDate.of(2018, Month.DECEMBER, 12)
 
   "MongoIdHelper" should {
     "get this jan 2011 current file name" in {
-      MongoIdHelper.currentFileName(jan2011) mustBe "exrates-monthly-0111"
+      MongoIdHelper.currentFileName(LocalDate.parse("2011-01-12")) mustBe "exrates-monthly-0111"
     }
 
     "get this dec 2018 current file name" in {
-      MongoIdHelper.currentFileName(dec2018) mustBe "exrates-monthly-1218"
+      MongoIdHelper.currentFileName(LocalDate.parse("2018-12-12")) mustBe "exrates-monthly-1218"
     }
   }
 }
