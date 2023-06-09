@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.currencyconversion.utils
+package uk.gov.hmrc.currencyconversion.errors
 
-import java.time.LocalDate
+sealed trait XrsFileErrors
 
-object MongoIdHelper {
+case object XrsFileMappingError extends XrsFileErrors
 
-  def currentFileName(date: LocalDate = LocalDate.now()): String =
-    "exrates-monthly-%02d".format(date.getMonthValue) + date.getYear.toString.substring(2)
+case object XrsFileNotFoundError extends XrsFileErrors
 
-}
+case object XrsFileSearchMaxNumberOfTimesError extends XrsFileErrors

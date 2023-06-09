@@ -88,7 +88,7 @@ class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent)(i
       }
 
   private def deleteOlderExchangeData() = {
-    val sixMonthOldDate = LocalDate.now.minusMonths(6.toInt)
+    val sixMonthOldDate = LocalDate.now.minusMonths(6)
     val oldFileName     = currentFileName(sixMonthOldDate)
 
     collection.findOneAndDelete(equal("_id", oldFileName)).toFutureOption() map {
@@ -109,9 +109,19 @@ class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent)(i
     deleteOlderExchangeData()
     Future.successful(None)
   }
+
+  def testOnlyInsert(exchangeRateData: JsObject, fileName: String): Unit =
+    Try {
+      val data = ExchangeRateObject(fileName, exchangeRateData)
+      collection.insertOne(data).toFuture()
+    }.getOrElse {
+      logger.error(s"[ExchangeRateRepository] XRS_FILE_CANNOT_BE_WRITTEN_ERROR writing to mongo is failed")
+      throw new Exception(s"Unable to insert exchangeRateRepository")
+    }
 }
 
 trait ExchangeRateRepository {
+
   def insert(data: JsObject, forNextMonth: Boolean = false): Unit
 
   def update(data: JsObject, forNextMonth: Boolean = false): Unit

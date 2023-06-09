@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.currencyconversion.repositories
 
-import java.time.LocalDate
-
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.libs.json.{JsObject, Json}
@@ -26,6 +24,7 @@ import uk.gov.hmrc.currencyconversion.models._
 import uk.gov.hmrc.currencyconversion.utils.MongoIdHelper.currentFileName
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
+import java.time.LocalDate
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class DefaultExchangeRateRepositorySpec
@@ -35,29 +34,27 @@ class DefaultExchangeRateRepositorySpec
 
   override def repository: DefaultExchangeRateRepository = new DefaultExchangeRateRepository(mongoComponent)
 
-  override def afterEach(): Unit = {
-    super.afterEach()
+  override def beforeEach(): Unit =
     prepareDatabase()
-  }
 
   private val date: LocalDate = LocalDate.now()
 
   private val exchangeRateDataJson: JsObject = Json
     .parse(
       """
-      |{
-      |    "timestamp": "2019-06-28T13:17:21Z",
-      |    "correlationid": "c4a81105-9417-4080-9cd2-c4469efc965c",
-      |    "exchangeRates": [
-      |        {
-      |            "validFrom": "2019-09-01",
-      |            "validTo": "2019-09-30",
-      |            "currencyCode": "INR",
-      |            "exchangeRate": 1.213,
-      |            "currencyName": "India"
-      |        }
-      |    ]
-      |}
+        |{
+        |    "timestamp": "2019-06-28T13:17:21Z",
+        |    "correlationid": "c4a81105-9417-4080-9cd2-c4469efc965c",
+        |    "exchangeRates": [
+        |        {
+        |            "validFrom": "2019-09-01",
+        |            "validTo": "2019-09-30",
+        |            "currencyCode": "INR",
+        |            "exchangeRate": 1.213,
+        |            "currencyName": "India"
+        |        }
+        |    ]
+        |}
     """.stripMargin
     )
     .as[JsObject]
@@ -65,19 +62,19 @@ class DefaultExchangeRateRepositorySpec
   private val updatedExchangeRateDataJson: JsObject = Json
     .parse(
       """
-      |{
-      |    "timestamp": "2020-06-28T13:17:21Z",
-      |    "correlationid": "c4a81105-9417-4080-9cd2-c4469efc965c",
-      |    "exchangeRates": [
-      |        {
-      |            "validFrom": "2020-09-01",
-      |            "validTo": "2020-09-30",
-      |            "currencyCode": "INR",
-      |            "exchangeRate": 1.213,
-      |            "currencyName": "India"
-      |        }
-      |    ]
-      |}
+        |{
+        |    "timestamp": "2020-06-28T13:17:21Z",
+        |    "correlationid": "c4a81105-9417-4080-9cd2-c4469efc965c",
+        |    "exchangeRates": [
+        |        {
+        |            "validFrom": "2020-09-01",
+        |            "validTo": "2020-09-30",
+        |            "currencyCode": "INR",
+        |            "exchangeRate": 1.213,
+        |            "currencyName": "India"
+        |        }
+        |    ]
+        |}
     """.stripMargin
     )
     .as[JsObject]
@@ -93,8 +90,11 @@ class DefaultExchangeRateRepositorySpec
   }
 
   "DefaultExchangeRateRepository" when {
+
     ".insert" should {
+
       "insert exchange rate data" when {
+
         "current month" in {
           repository.insert(exchangeRateData = exchangeRateDataJson) shouldBe ()
         }
@@ -106,6 +106,7 @@ class DefaultExchangeRateRepositorySpec
     }
 
     ".isDataPresent" should {
+
       "return false" when {
         "checking if exchange rate data exists in the next two months" in new Setup {
           await(repository.isDataPresent(currentFileName(date.plusMonths(2)))) shouldBe false
@@ -124,7 +125,9 @@ class DefaultExchangeRateRepositorySpec
     }
 
     ".get" should {
+
       "return None" when {
+
         "checking if exchange rate data exists in the next two months" in new Setup {
           await(repository.get(currentFileName(date.plusMonths(2)))) shouldBe None
         }
@@ -144,7 +147,9 @@ class DefaultExchangeRateRepositorySpec
     }
 
     ".update" should {
+
       "update exchange rate data" when {
+
         "current month" in new Setup {
           repository.update(exchangeRateData = updatedExchangeRateDataJson) shouldBe ()
         }
@@ -156,16 +161,21 @@ class DefaultExchangeRateRepositorySpec
     }
 
     ".insertOrUpdate" should {
+
       "return None" when {
+
         "inserting exchange rate data for current month where no data exists" in {
           await(repository.insertOrUpdate(exchangeRateDataJson)) shouldBe None
+          repository.collection.drop()
         }
 
         "updating exchange rate data for current month where data exists" in new Setup {
           await(repository.insertOrUpdate(updatedExchangeRateDataJson)) shouldBe None
+          repository.collection.drop()
         }
 
         "a six month old exchange rate data exists" in {
+
           val monthsToSubtract: Long = 6
 
           await(

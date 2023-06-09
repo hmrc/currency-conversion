@@ -16,77 +16,103 @@
 
 package uk.gov.hmrc.currencyconversion.services
 
-import java.time.LocalDate
-import java.time.temporal.TemporalAdjusters.lastDayOfMonth
-import javax.inject.Inject
+import play.api.Configuration
 import play.api.libs.json._
 import uk.gov.hmrc.currencyconversion.models._
 import uk.gov.hmrc.currencyconversion.repositories.ConversionRatePeriodRepository
 
+import java.time.LocalDate
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-class ExchangeRateService @Inject() (exchangeRateRepository: ConversionRatePeriodRepository)(implicit
+class ExchangeRateService @Inject() (
+  conversionRatePeriodRepository: ConversionRatePeriodRepository,
+  config: Configuration
+)(implicit
   ec: ExecutionContext
 ) {
 
-  def getRates(date: LocalDate, currencyCodes: List[String]): Future[List[ExchangeRateResult]] = {
-    val conversionRatePeriod = exchangeRateRepository.getConversionRatePeriod(date)
-    Future.sequence {
-      currencyCodes.map { currencyCode =>
-        conversionRatePeriod.flatMap {
-          case Some(crp) =>
-            crp.rates.get(currencyCode) match {
-              case Some(rate) =>
-                Future.successful(
-                  ExchangeRateSuccessResult(
-                    Json.obj(
-                      "startDate"    -> crp.startDate,
-                      "endDate"      -> crp.endDate,
-                      "currencyCode" -> currencyCode,
-                      "rate"         -> rate.map(_.toString())
-                    )
-                  )
+  private val fallBackMonthLimit = config.get[Int]("fallback.months")
+
+  private def jsonObjectCreator(
+    startDate: LocalDate,
+    endDate: LocalDate,
+    currencyCode: String,
+    rate: Option[BigDecimal]
+  ) =
+    if (rate.isDefined) {
+      Json.obj(
+        "startDate"    -> startDate,
+        "endDate"      -> endDate,
+        "currencyCode" -> currencyCode,
+        "rate"         -> rate.map(_.toString())
+      )
+    } else {
+      Json.obj(
+        "startDate"    -> startDate,
+        "endDate"      -> endDate,
+        "currencyCode" -> currencyCode
+      )
+    }
+
+  def getFallbackConversionRatePeriod(date: LocalDate, currencyCode: String): Future[ExchangeRateOldFileResult] =
+    conversionRatePeriodRepository
+      .fileLookBack(date, fallBackMonthLimit)(conversionRatePeriodRepository.getConversionRatePeriod)
+      .map {
+        case Right(fallbackConversionRatePeriod) =>
+          fallbackConversionRatePeriod.rates.get(currencyCode) match {
+            case Some(rate) =>
+              ExchangeRateOldFileResult(
+                jsonObjectCreator(
+                  fallbackConversionRatePeriod.startDate,
+                  fallbackConversionRatePeriod.endDate,
+                  currencyCode,
+                  rate
                 )
-              case None       =>
-                Future.successful(
-                  ExchangeRateSuccessResult(
-                    Json.obj("startDate" -> crp.startDate, "endDate" -> crp.endDate, "currencyCode" -> currencyCode)
-                  )
+              )
+            case None       =>
+              ExchangeRateOldFileResult(
+                jsonObjectCreator(
+                  fallbackConversionRatePeriod.startDate,
+                  fallbackConversionRatePeriod.endDate,
+                  currencyCode,
+                  None
                 )
-            }
-          case None      =>
-            exchangeRateRepository.getLatestConversionRatePeriod(date.minusMonths(1)).map { fallbackCrp =>
-              fallbackCrp.rates.get(currencyCode) match {
-                case Some(rate) =>
-                  ExchangeRateOldFileResult(
-                    Json.obj(
-                      "startDate"    -> fallbackCrp.startDate,
-                      "endDate"      -> fallbackCrp.endDate,
-                      "currencyCode" -> currencyCode,
-                      "rate"         -> rate.map(_.toString())
-                    )
-                  )
-                case None       =>
-                  ExchangeRateOldFileResult(
-                    Json.obj(
-                      "startDate"    -> fallbackCrp.startDate,
-                      "endDate"      -> fallbackCrp.endDate,
-                      "currencyCode" -> currencyCode
-                    )
-                  )
-              }
-            }
-        }
+              )
+          }
+        case Left(error)                         =>
+          throw new Exception(s"[ExchangeRateService][lookBackAndGetFallbackData] Look back fail with error: $error")
       }
+
+  def getConversionRateHelper(date: LocalDate, currencyCode: String): Future[ExchangeRateResult] = {
+    val conversionRatePeriod = conversionRatePeriodRepository.getConversionRatePeriod(date)
+    conversionRatePeriod.flatMap {
+      case Right(conversionRatePeriod) =>
+        conversionRatePeriod.rates.get(currencyCode) match {
+          case Some(rate) =>
+            Future(
+              ExchangeRateSuccessResult(
+                jsonObjectCreator(conversionRatePeriod.startDate, conversionRatePeriod.endDate, currencyCode, rate)
+              )
+            )
+          case None       =>
+            Future(
+              ExchangeRateSuccessResult(
+                jsonObjectCreator(conversionRatePeriod.startDate, conversionRatePeriod.endDate, currencyCode, None)
+              )
+            )
+        }
+      case Left(_)                     =>
+        getFallbackConversionRatePeriod(date, currencyCode)
     }
   }
 
-  def getCurrencies(date: LocalDate): Future[Option[CurrencyPeriod]] =
-    exchangeRateRepository.getCurrencyPeriod(date).flatMap {
-      case Some(value) => Future.successful(Some(value))
-      case None        =>
-        val fallbackDate = date.minusMonths(1).`with`(lastDayOfMonth()) //lastDay of previous month
-        exchangeRateRepository.getCurrencyPeriod(fallbackDate)
+  def getRates(date: LocalDate, currencyCodes: List[String]): Future[List[ExchangeRateResult]] =
+    Future.sequence {
+      currencyCodes.map { currencyCode: String => getConversionRateHelper(date, currencyCode) }
     }
+
+  def getCurrencies(date: LocalDate) =
+    conversionRatePeriodRepository.fileLookBack(date, 6)(conversionRatePeriodRepository.getCurrencyPeriod)
 
 }

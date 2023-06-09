@@ -84,7 +84,7 @@ class XrsExchangeRateRequestWorkerSpec
 
   }
 
-  "Handle the service unavailable response from Xrs service" in {
+  "handle the service unavailable response from Xrs service" in {
 
     server.stubFor(
       post(urlEqualTo("/passengers/exchangerequest/xrs/getexchangerate/v1"))
@@ -146,7 +146,6 @@ class XrsExchangeRateRequestWorkerSpec
       workerResponse.status shouldBe OK
       workerResponse.body   shouldBe invalidJsonResponse
     }
-
   }
 
   "xrs exchange rate service call must not fail with invalid XRS file format" in {

@@ -17,15 +17,20 @@
 package uk.gov.hmrc.currencyconversion.repositories
 
 import com.google.inject.ImplementedBy
-
-import java.time.LocalDate
+import uk.gov.hmrc.currencyconversion.errors.XrsFileErrors
 import uk.gov.hmrc.currencyconversion.models.{ConversionRatePeriod, CurrencyPeriod}
 
+import java.time.LocalDate
 import scala.concurrent.Future
 
 @ImplementedBy(classOf[ConversionRatePeriodJson])
 trait ConversionRatePeriodRepository {
-  def getConversionRatePeriod(date: LocalDate): Future[Option[ConversionRatePeriod]]
-  def getLatestConversionRatePeriod(date: LocalDate): Future[ConversionRatePeriod]
-  def getCurrencyPeriod(date: LocalDate): Future[Option[CurrencyPeriod]]
+
+  def getConversionRatePeriod(date: LocalDate): Future[Either[XrsFileErrors, ConversionRatePeriod]]
+
+  def fileLookBack[A](date: LocalDate, numberOfMonthsToLookBack: Int)(
+    f: LocalDate => Future[Either[XrsFileErrors, A]]
+  ): Future[Either[XrsFileErrors, A]]
+
+  def getCurrencyPeriod(date: LocalDate): Future[Either[XrsFileErrors, CurrencyPeriod]]
 }

@@ -16,10 +16,11 @@
 
 package uk.gov.hmrc.currencyconversion.repositories
 
+import cats.data.EitherT
 import play.api.i18n.Lang.logger.logger
 import play.api.libs.json.JsSuccess
-import play.api.libs.json.OFormat.oFormatFromReadsAndOWrites
-import uk.gov.hmrc.currencyconversion.models.{ConversionRatePeriod, Currency, CurrencyPeriod, ExchangeRateData}
+import uk.gov.hmrc.currencyconversion.errors.{XrsFileErrors, XrsFileMappingError, XrsFileNotFoundError, XrsFileSearchMaxNumberOfTimesError}
+import uk.gov.hmrc.currencyconversion.models._
 import uk.gov.hmrc.currencyconversion.utils.MongoIdHelper.currentFileName
 
 import java.time.LocalDate
@@ -30,84 +31,77 @@ class ConversionRatePeriodJson @Inject() (writeExchangeRateRepository: ExchangeR
   ec: ExecutionContext
 ) extends ConversionRatePeriodRepository {
 
-  def getExchangeRateFileName(date: LocalDate): Future[String] = {
-    val targetFileName = currentFileName(date)
+  def getExchangeRateObjectFile(currentDate: LocalDate): Future[Either[XrsFileErrors, ExchangeRateObject]] = {
 
-    writeExchangeRateRepository.isDataPresent(targetFileName).map {
-      case true => targetFileName
-      case _    =>
-        logger.info(s"$targetFileName is not present")
-        "empty"
+    val targetFileName = currentFileName(currentDate)
+
+    writeExchangeRateRepository.get(targetFileName).map {
+      case None       =>
+        logger.error(s"[ConversionRatePeriodJson][getExchangeRateObjectFile] Date: $currentDate, XrsFileNotFoundError")
+        Left(XrsFileNotFoundError)
+      case Some(file) =>
+        logger.info(s"[ConversionRatePeriodJson][getExchangeRateObjectFile] File found for Date: $currentDate")
+        Right(file)
     }
   }
 
-  def getExchangeRatesData(filePath: String): Future[ExchangeRateData] =
-    writeExchangeRateRepository
-      .get(filePath)
-      .map {
-        case response if response.isEmpty =>
+  def getExchangeRatesData(currentDate: LocalDate): Future[Either[XrsFileErrors, ExchangeRateData]] =
+    getExchangeRateObjectFile(currentDate).map { response =>
+      response.map(_.exchangeRateData.validate[ExchangeRateData]) match {
+        case Right(JsSuccess(exchangeRateData, _)) => Right(exchangeRateData)
+        case _                                     =>
           logger.error(
-            s"XRS_FILE_CANNOT_BE_READ_ERROR [ConversionRatePeriodJson] Exchange rate file is not able to read"
+            s"[ConversionRatePeriodJson][getExchangeRatesData] Exchange rate data mapping has failed. Possibly unable to find file or error in json"
           )
-          throw new RuntimeException("Exchange rate data is not able to read.")
-        case response                     =>
-          response.get.exchangeRateData.validate[ExchangeRateData] match {
-            case JsSuccess(seq, _) =>
-              seq
-            case _                 =>
-              logger.error(
-                s"XRS_FILE_CANNOT_BE_READ_ERROR [ConversionRatePeriodJson] Exchange rate data mapping is failed"
-              )
-              throw new RuntimeException("Exchange rate data mapping is failed")
-          }
+          Left(XrsFileMappingError)
+      }
+    }
+
+  def getMinimumDecimalScale(rate: BigDecimal): BigDecimal =
+    if (rate.scale < 2) rate.setScale(2) else rate
+
+  def getExchangeRates(currentDate: LocalDate): Future[Either[XrsFileErrors, Map[String, Some[BigDecimal]]]] =
+    getExchangeRatesData(currentDate).map { exchangeRateData =>
+      exchangeRateData
+        .map(_.exchangeData.flatMap { data =>
+          Map(data.currencyCode -> Some(getMinimumDecimalScale(data.exchangeRate)))
+        })
+        .map(_.toMap)
+    }
+
+  def getCurrencies(currentDate: LocalDate): Future[Either[XrsFileErrors, Seq[Currency]]] =
+    getExchangeRatesData(currentDate).map { exchangeRates =>
+      exchangeRates.map(_.exchangeData.map(data => Currency("", data.currencyCode, data.currencyName)))
+    }
+
+  def getConversionRatePeriod(date: LocalDate): Future[Either[XrsFileErrors, ConversionRatePeriod]] = {
+    for {
+      exchangeRateData    <- EitherT[Future, XrsFileErrors, ExchangeRateData](getExchangeRatesData(date))
+      exchangeRates       <- EitherT[Future, XrsFileErrors, Map[String, Option[BigDecimal]]](getExchangeRates(date))
+      startDate: LocalDate = exchangeRateData.exchangeData.map(_.validFrom.withDayOfMonth(1)).head // start of month
+      endDate: LocalDate   = startDate.withDayOfMonth(startDate.lengthOfMonth()) // end of month
+    } yield ConversionRatePeriod(startDate, endDate, None, exchangeRates)
+  }.value
+
+  def fileLookBack[A](desiredFileDate: LocalDate, numberOfMonthsToLookBack: Int)(
+    f: LocalDate => Future[Either[XrsFileErrors, A]]
+  ): Future[Either[XrsFileErrors, A]] = {
+
+    def loop(index: Int, limit: Int, currentDate: LocalDate): Future[Either[XrsFileErrors, A]] =
+      f(currentDate).flatMap {
+        case _ if index >= limit => Future(Left(XrsFileSearchMaxNumberOfTimesError))
+        case Left(_)             =>
+          loop(index + 1, limit, currentDate.minusMonths(1))
+        case Right(a)            => Future(Right(a))
       }
 
-  def getExchangeRates(filePath: String): Future[Map[String, Option[BigDecimal]]] = {
-
-    def getMinimumDecimalScale(rate: BigDecimal): BigDecimal =
-      if (rate.scale < 2) rate.setScale(2) else rate
-
-    getExchangeRatesData(filePath).map { exchangeRates =>
-      exchangeRates.exchangeData.flatMap { data =>
-        Map(data.currencyCode -> Some(getMinimumDecimalScale(data.exchangeRate)))
-      }.toMap
-    }
+    loop(0, numberOfMonthsToLookBack, desiredFileDate)
   }
 
-  def getCurrencies(filePath: String): Future[Seq[Currency]] =
-    getExchangeRatesData(filePath).map { exchangeRates =>
-      exchangeRates.exchangeData map { data =>
-        Currency("", data.currencyCode, data.currencyName)
-      }
-    }
-
-  def getConversionRatePeriod(date: LocalDate): Future[Option[ConversionRatePeriod]] =
-    getExchangeRateFileName(date).flatMap { fileName =>
-      if (fileName.equals("empty")) {
-        Future.successful(None)
-      } else {
-        getExchangeRates(fileName).map { rates =>
-          Some(ConversionRatePeriod(date.withDayOfMonth(1), date.withDayOfMonth(date.lengthOfMonth()), None, rates))
-        }
-      }
-    }
-
-  def getLatestConversionRatePeriod(date: LocalDate): Future[ConversionRatePeriod] =
-    getExchangeRateFileName(date).flatMap { fileName =>
-      if (fileName.equals("empty")) {
-        logger.error(s"XRS_FILE_NOT_AVAILABLE_ERROR [ConversionRatePeriodJson] Exchange rate file is not available.")
-        Future.failed(new RuntimeException("Exchange rate file is not able to read."))
-      } else {
-        getExchangeRates(fileName).map { rates =>
-          ConversionRatePeriod(date.withDayOfMonth(1), date.withDayOfMonth(date.lengthOfMonth()), None, rates)
-        }
-      }
-    }
-
-  def getCurrencyPeriod(date: LocalDate): Future[Option[CurrencyPeriod]] =
-    getExchangeRateFileName(date).flatMap { fileName =>
-      getCurrencies(fileName).map { currencies =>
-        Some(CurrencyPeriod(date.withDayOfMonth(1), date.withDayOfMonth(date.lengthOfMonth()), currencies))
+  def getCurrencyPeriod(date: LocalDate): Future[Either[XrsFileErrors, CurrencyPeriod]] =
+    getCurrencies(date).map { eitherCurrencies =>
+      eitherCurrencies.map { currencies =>
+        CurrencyPeriod(date.withDayOfMonth(1), date.withDayOfMonth(date.lengthOfMonth()), currencies)
       }
     }
 }

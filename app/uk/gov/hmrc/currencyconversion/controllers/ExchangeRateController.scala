@@ -44,10 +44,10 @@ class ExchangeRateController @Inject() (
 
       if (exchangeRateResults.exists(result => result.isInstanceOf[ExchangeRateOldFileResult])) {
         logger.error(
-          "XRS_FILE_NOT_AVAILABLE_ERROR [ExchangeRateController] [getRatesByCurrencyCode] Using older " +
+          "[ExchangeRateController][getRatesByCurrencyCode] XRS_FILE_NOT_AVAILABLE_ERROR - Using older " +
             "XRS file as XRS file for supplied date could not be found..."
         )
-        Ok(Json.toJson(rates)).withHeaders(WARNING -> s"""299 - "Date out of range" "$dateTime"""")
+        Ok(Json.toJson(rates)).withHeaders(WARNING -> s"299 - Date out of range: $dateTime")
       } else {
         Ok(Json.toJson(rates))
       }
@@ -56,8 +56,8 @@ class ExchangeRateController @Inject() (
 
   def getCurrenciesByDate(date: LocalDate): Action[AnyContent] = Action.async {
     exchangeRatesService.getCurrencies(date).map {
-      case Some(cp) => Ok(Json.toJson(cp))
-      case None     => NotFound
+      case Right(currencyPeriod) => Ok(Json.toJson(currencyPeriod))
+      case Left(_)               => NotFound
     }
   }
 }
