@@ -61,7 +61,9 @@ class ExchangeRateServiceSpec extends AnyWordSpecLike with Matchers with Mockito
       "return None" in {
         when(mockConversionRatePeriodRepository.getCurrencyPeriod(any())).thenReturn(Future.successful(None))
 
-        await(exchangeRateService.getCurrencies(LocalDate.parse("2019-09-01"))) shouldBe None
+        intercept[RuntimeException] {
+          await(exchangeRateService.getCurrencies(LocalDate.parse("2019-09-01")))
+        }.getMessage shouldBe "Exchange rate file is not available."
       }
     }
   }

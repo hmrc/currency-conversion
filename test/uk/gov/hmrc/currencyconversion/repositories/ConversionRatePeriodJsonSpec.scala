@@ -17,11 +17,11 @@
 package uk.gov.hmrc.currencyconversion.repositories
 
 import java.time.LocalDate
-
 import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
+import play.api.Configuration
 import play.api.libs.json.{JsObject, Json}
 import play.api.test.Helpers._
 import uk.gov.hmrc.currencyconversion.models._
@@ -32,9 +32,11 @@ import scala.concurrent.Future
 class ConversionRatePeriodJsonSpec extends AnyWordSpecLike with Matchers with MockitoSugar {
 
   private val mockExchangeRateRepository: ExchangeRateRepository = mock[ExchangeRateRepository]
+  private val mockConfiguration: Configuration                   = Configuration("fallback.months" -> 6)
 
   private val conversionRatePeriodJson: ConversionRatePeriodJson = new ConversionRatePeriodJson(
-    mockExchangeRateRepository
+    mockExchangeRateRepository,
+    mockConfiguration
   )
 
   private val exchangeRateData: ExchangeRateData = ExchangeRateData(
@@ -118,16 +120,67 @@ class ConversionRatePeriodJsonSpec extends AnyWordSpecLike with Matchers with Mo
       }
     }
 
-    ".getLatestConversionRatePeriod" should {
-      "throw RuntimeException" when {
+    ".getConversionRatePeriod" should {
+      "return None" when {
         "no exchange rate data is present" in {
           when(mockExchangeRateRepository.isDataPresent(any())).thenReturn(Future.successful(false))
 
-          intercept[RuntimeException] {
-            await(conversionRatePeriodJson.getLatestConversionRatePeriod(LocalDate.parse("2019-09-01")))
-          }.getMessage shouldBe "Exchange rate file is not able to read."
+          val result = await(conversionRatePeriodJson.getConversionRatePeriod(LocalDate.parse("2019-08-01")))
+          result shouldBe None
         }
       }
+    }
+
+    ".getExchangeRateFileName" should {
+      "return empty" when {
+        "no exchange rate data is present" in {
+          when(mockExchangeRateRepository.isDataPresent(any())).thenReturn(Future.successful(false))
+
+          val result = await(conversionRatePeriodJson.getExchangeRateFileName(LocalDate.parse("2019-08-01")))
+          result shouldBe "empty"
+        }
+      }
+
+      "return a valid file" when {
+        "there is an exchange rate file is present for the given date" in {
+          when(mockExchangeRateRepository.isDataPresent(any())).thenReturn(Future.successful(true))
+
+          val result = await(conversionRatePeriodJson.getExchangeRateFileName(LocalDate.parse("2019-08-01")))
+          result shouldBe "exrates-monthly-0819"
+        }
+      }
+
+      "return a valid file" when {
+        "there is an exchange rate data is not present for given month but present 6 months before the requested date" in {
+          when(mockExchangeRateRepository.isDataPresent("exrates-monthly-0819")).thenReturn(Future.successful(false))
+          when(mockExchangeRateRepository.isDataPresent("exrates-monthly-0719")).thenReturn(Future.successful(false))
+          when(mockExchangeRateRepository.isDataPresent("exrates-monthly-0619")).thenReturn(Future.successful(false))
+          when(mockExchangeRateRepository.isDataPresent("exrates-monthly-0519")).thenReturn(Future.successful(false))
+          when(mockExchangeRateRepository.isDataPresent("exrates-monthly-0419")).thenReturn(Future.successful(false))
+          when(mockExchangeRateRepository.isDataPresent("exrates-monthly-0319")).thenReturn(Future.successful(false))
+          when(mockExchangeRateRepository.isDataPresent("exrates-monthly-0219")).thenReturn(Future.successful(true))
+
+          val result = await(conversionRatePeriodJson.getExchangeRateFileName(LocalDate.parse("2019-08-01")))
+          result shouldBe "exrates-monthly-0219"
+        }
+      }
+
+      "return a empty" when {
+        "there is an exchange rate data neither present for the given month nor in the last 6 months to the requested date" in {
+          when(mockExchangeRateRepository.isDataPresent("exrates-monthly-0819")).thenReturn(Future.successful(false))
+          when(mockExchangeRateRepository.isDataPresent("exrates-monthly-0719")).thenReturn(Future.successful(false))
+          when(mockExchangeRateRepository.isDataPresent("exrates-monthly-0619")).thenReturn(Future.successful(false))
+          when(mockExchangeRateRepository.isDataPresent("exrates-monthly-0519")).thenReturn(Future.successful(false))
+          when(mockExchangeRateRepository.isDataPresent("exrates-monthly-0419")).thenReturn(Future.successful(false))
+          when(mockExchangeRateRepository.isDataPresent("exrates-monthly-0319")).thenReturn(Future.successful(false))
+          when(mockExchangeRateRepository.isDataPresent("exrates-monthly-0219")).thenReturn(Future.successful(false))
+          when(mockExchangeRateRepository.isDataPresent("exrates-monthly-0119")).thenReturn(Future.successful(true))
+
+          val result = await(conversionRatePeriodJson.getExchangeRateFileName(LocalDate.parse("2019-08-01")))
+          result shouldBe "empty"
+        }
+      }
+
     }
   }
 }

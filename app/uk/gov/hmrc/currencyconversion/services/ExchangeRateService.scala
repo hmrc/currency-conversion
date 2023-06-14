@@ -16,13 +16,13 @@
 
 package uk.gov.hmrc.currencyconversion.services
 
-import java.time.LocalDate
-import java.time.temporal.TemporalAdjusters.lastDayOfMonth
-import javax.inject.Inject
+import play.api.i18n.Lang.logger.logger
 import play.api.libs.json._
 import uk.gov.hmrc.currencyconversion.models._
 import uk.gov.hmrc.currencyconversion.repositories.ConversionRatePeriodRepository
 
+import java.time.LocalDate
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class ExchangeRateService @Inject() (exchangeRateRepository: ConversionRatePeriodRepository)(implicit
@@ -55,27 +55,10 @@ class ExchangeRateService @Inject() (exchangeRateRepository: ConversionRatePerio
                 )
             }
           case None      =>
-            exchangeRateRepository.getLatestConversionRatePeriod(date.minusMonths(1)).map { fallbackCrp =>
-              fallbackCrp.rates.get(currencyCode) match {
-                case Some(rate) =>
-                  ExchangeRateOldFileResult(
-                    Json.obj(
-                      "startDate"    -> fallbackCrp.startDate,
-                      "endDate"      -> fallbackCrp.endDate,
-                      "currencyCode" -> currencyCode,
-                      "rate"         -> rate.map(_.toString())
-                    )
-                  )
-                case None       =>
-                  ExchangeRateOldFileResult(
-                    Json.obj(
-                      "startDate"    -> fallbackCrp.startDate,
-                      "endDate"      -> fallbackCrp.endDate,
-                      "currencyCode" -> currencyCode
-                    )
-                  )
-              }
-            }
+            logger.error(
+              s"[ExchangeRateService] [getRates] XRS_FILE_NOT_AVAILABLE_ERROR No Exchange rate file is found with in the fallback period."
+            )
+            Future.failed(new RuntimeException("Exchange rate file is not available."))
         }
       }
     }
@@ -83,10 +66,14 @@ class ExchangeRateService @Inject() (exchangeRateRepository: ConversionRatePerio
 
   def getCurrencies(date: LocalDate): Future[Option[CurrencyPeriod]] =
     exchangeRateRepository.getCurrencyPeriod(date).flatMap {
-      case Some(value) => Future.successful(Some(value))
+      case Some(value) =>
+        logger.info(s"[ExchangeRateService] [getCurrencies] getCurrencyPeriod has returned a valid file: $value")
+        Future.successful(Some(value))
       case None        =>
-        val fallbackDate = date.minusMonths(1).`with`(lastDayOfMonth()) //lastDay of previous month
-        exchangeRateRepository.getCurrencyPeriod(fallbackDate)
+        logger.error(
+          s"[ExchangeRateService] [getCurrencies] XRS_FILE_NOT_AVAILABLE_ERROR No Exchange rate file is found with in the fallback period."
+        )
+        Future.failed(new RuntimeException("Exchange rate file is not available."))
     }
 
 }

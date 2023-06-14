@@ -48,6 +48,13 @@ class ExchangeRateControllerSpec
     Mockito.reset(exchangeRateRepository)
     val exchangeRate: ExchangeRateObject = ExchangeRateObject("exrates-monthly-0919", Json.parse(data).as[JsObject])
     doReturn(Future.successful(true)) when exchangeRateRepository isDataPresent "exrates-monthly-0919"
+    doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-1019"
+    doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-1119"
+    doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-1219"
+    doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-0120"
+    doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-0220"
+    doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-0320"
+    doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-0420"
     doReturn(successful(Some(exchangeRate))) when exchangeRateRepository get "exrates-monthly-0919"
 
     SharedMetricRegistries.clear()
@@ -86,10 +93,35 @@ class ExchangeRateControllerSpec
       |        ]
       |}""".stripMargin
 
+  "Getting rates for a date with a file received with in the last 6 months and 1 valid currency" must {
+
+    "return 200 and the correct json" in {
+      val result = await(route(app, FakeRequest("GET", "/currency-conversion/rates/2019-12-10?cc=USD")).get)
+
+      result.header.status shouldBe OK
+
+      result.header.headers.get("Warning") shouldBe None
+
+      contentAsJson(Future.successful(result)) shouldBe Json.arr(
+        Json.obj("startDate" -> "2019-12-01", "endDate" -> "2019-12-31", "currencyCode" -> "USD", "rate" -> "1.213")
+      )
+    }
+  }
+
+  "Getting rates for a date with no file received for month and not in the last 6 months and 1 valid currency" must {
+
+    "return Runtime Exception" in {
+
+      intercept[RuntimeException] {
+        await(route(app, FakeRequest("GET", "/currency-conversion/rates/2020-04-10?cc=USD")).get)
+      }.getMessage shouldBe "Exchange rate file is not available."
+
+    }
+  }
+
   "Getting rates for a valid date and 1 valid currency" must {
 
     "return 200 and the correct json" in {
-
       val result = await(route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-10?cc=USD")).get)
 
       result.header.status shouldBe OK
@@ -99,10 +131,8 @@ class ExchangeRateControllerSpec
       contentAsJson(Future.successful(result)) shouldBe Json.arr(
         Json.obj("startDate" -> "2019-09-01", "endDate" -> "2019-09-30", "currencyCode" -> "USD", "rate" -> "1.213")
       )
-      Thread.sleep(2000.toLong)
     }
     "return 200 and the correct json with scaling 2 decimal at least" in {
-
       val result: Result = await(route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-10?cc=INR")).get)
 
       result.header.status shouldBe OK
@@ -112,14 +142,12 @@ class ExchangeRateControllerSpec
       contentAsJson(Future.successful(result)) shouldBe Json.arr(
         Json.obj("startDate" -> "2019-09-01", "endDate" -> "2019-09-30", "currencyCode" -> "INR", "rate" -> "1.00")
       )
-      Thread.sleep(2000.toLong)
     }
   }
 
   "Getting rates for a valid date and 1 invalid currency" must {
 
     "return 200 and the correct json" in {
-
       val result = await(route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-10?cc=INVALID")).get)
 
       result.header.status shouldBe OK
@@ -135,7 +163,6 @@ class ExchangeRateControllerSpec
   "Getting rates for a valid date and 1 valid currency and 1 invalid currency" must {
 
     "return 200 and the correct json" in {
-
       val result = await(route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-10?cc=USD&cc=INVALID")).get)
 
       result.header.status shouldBe OK
@@ -157,37 +184,26 @@ class ExchangeRateControllerSpec
     }
   }
 
-  "Getting rates for a date which has no rates Json file and a valid currency code" must {
+  "Getting rates for a date which has no rates Json file for the month or in the last 6 months and a valid currency code" must {
 
-    "return 200 and the correct json" in {
-      doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-1019"
-
-      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-10-10?cc=USD")).get
-
-      status(result) shouldBe Status.OK
-
-      contentAsJson(result).as[JsArray].value(0).as[JsObject].keys shouldBe Set(
-        "startDate",
-        "endDate",
-        "currencyCode",
-        "rate"
-      )
+    "throw a RuntimeException with valid error" in {
+      intercept[RuntimeException] {
+        await(route(app, FakeRequest("GET", "/currency-conversion/rates/2020-04-10?cc=USD")).get)
+      }.getMessage shouldBe "Exchange rate file is not available."
     }
   }
 
-  "Getting rates for a date which has no rates Json file, 1 valid currency code and 1 invalid currency code" must {
-    "return response from previous month" in {
-      doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-1019"
-      val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-10-10?cc=USD&cc=INVALID")).get
-
-      status(result) shouldBe Status.OK
+  "Getting rates for a date which has no rates Json file for the month or in the last 6 months, 1 valid currency code and 1 invalid currency code" must {
+    "throw a RuntimeException with valid error" in {
+      intercept[RuntimeException] {
+        await(route(app, FakeRequest("GET", "/currency-conversion/rates/2020-04-10?cc=USD&cc=INVALID")).get)
+      }.getMessage shouldBe "Exchange rate file is not available."
     }
   }
 
   "Getting rates for last day of the month and 1 valid currency code" must {
 
     "return 200 and the correct json which gets rate from file of the same month" in {
-
       val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-30?cc=USD")).get
 
       status(result) shouldBe Status.OK
@@ -201,7 +217,6 @@ class ExchangeRateControllerSpec
   "Getting rates for first day of the month and 1 valid currency code" must {
 
     "return 200 and the correct json which gets rate from file of the same month" in {
-
       val result = route(app, FakeRequest("GET", "/currency-conversion/rates/2019-09-01?cc=USD")).get
 
       status(result) shouldBe Status.OK
@@ -215,7 +230,6 @@ class ExchangeRateControllerSpec
   "Getting rates for an invalid date" must {
 
     "return 400 and the correct json" in {
-
       val result = route(app, FakeRequest("GET", "/currency-conversion/rates/INVALID-DATE?cc=USD")).get
 
       status(result) shouldBe Status.BAD_REQUEST
@@ -228,11 +242,6 @@ class ExchangeRateControllerSpec
   "Getting currencies for a valid date" must {
 
     "return 200 and the correct json" in {
-
-      val exchangeRate: ExchangeRateObject = ExchangeRateObject("exrates-monthly-0919", Json.parse(data).as[JsObject])
-      doReturn(Future.successful(true)) when exchangeRateRepository isDataPresent "exrates-monthly-0919"
-      doReturn(successful(Some(exchangeRate))) when exchangeRateRepository get "exrates-monthly-0919"
-
       val result = route(app, FakeRequest("GET", "/currency-conversion/currencies/2019-09-01")).get
 
       status(result) shouldBe Status.OK
@@ -244,26 +253,35 @@ class ExchangeRateControllerSpec
   "Getting currencies for an invalid date" must {
 
     "return 400" in {
-
       val result = route(app, FakeRequest("GET", "/currency-conversion/currencies/INVALID-DATE")).get
 
       status(result) shouldBe Status.BAD_REQUEST
     }
   }
 
-  "Getting currencies for a date which does not exist" must {
+  "Getting currencies for a date" must {
 
-    "return 200 if fallback is available" in {
-
-      val exchangeRate: ExchangeRateObject = ExchangeRateObject("exrates-monthly-0919", Json.parse(data).as[JsObject])
-      doReturn(Future.successful(true)) when exchangeRateRepository isDataPresent "exrates-monthly-0919"
-      doReturn(successful(Some(exchangeRate))) when exchangeRateRepository get "exrates-monthly-0919"
-
+    "return 200 if there is a file for the given date" in {
       val result = route(app, FakeRequest("GET", "/currency-conversion/currencies/2019-09-22")).get
 
       status(result) shouldBe Status.OK
 
       contentAsJson(result).as[JsObject].keys shouldBe Set("start", "end", "currencies")
+    }
+
+    "return 200 if there is a file with in the last 6 months" in {
+      val result = route(app, FakeRequest("GET", "/currency-conversion/currencies/2019-12-22")).get
+
+      status(result) shouldBe Status.OK
+
+      contentAsJson(result).as[JsObject].keys shouldBe Set("start", "end", "currencies")
+    }
+
+    "return RunTimeException if there is no file found for the month or with in the last 6 months" in {
+
+      intercept[RuntimeException] {
+        await(route(app, FakeRequest("GET", "/currency-conversion/currencies/2020-04-22")).get)
+      }.getMessage shouldBe "Exchange rate file is not available."
     }
   }
 

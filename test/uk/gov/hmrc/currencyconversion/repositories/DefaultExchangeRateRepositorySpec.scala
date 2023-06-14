@@ -17,7 +17,6 @@
 package uk.gov.hmrc.currencyconversion.repositories
 
 import java.time.LocalDate
-
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.libs.json.{JsObject, Json}
