@@ -64,7 +64,7 @@ class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent)(i
       }
     }
       .getOrElse {
-        logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_ERROR [ExchangeRateRepository] " + s"writing to mongo is failed ")
+        logger.error(s"[ExchangeRateRepository] XRS_FILE_CANNOT_BE_WRITTEN_ERROR " + s"writing to mongo is failed ")
         throw new Exception(s"unable to insert exchangeRateRepository")
       }
 
@@ -83,7 +83,7 @@ class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent)(i
       logger.info(s"[ExchangeRateRepository] writing to mongo is successful ${mongoId(forNextMonth)}")
     }
       .getOrElse {
-        logger.error(s"XRS_FILE_CANNOT_BE_WRITTEN_ERROR [ExchangeRateRepository] " + s"writing to mongo is failed")
+        logger.error(s"[ExchangeRateRepository] XRS_FILE_CANNOT_BE_WRITTEN_ERROR " + s"writing to mongo is failed")
         throw new Exception(s"unable to insert exchangeRateRepository ")
       }
 

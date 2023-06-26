@@ -24,19 +24,40 @@ import uk.gov.hmrc.currencyconversion.utils.MongoIdHelper.currentFileName
 
 import java.time.LocalDate
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
+import play.api.Configuration
 
-class ConversionRatePeriodJson @Inject() (writeExchangeRateRepository: ExchangeRateRepository)(implicit
-  ec: ExecutionContext
+import scala.annotation.tailrec
+import scala.concurrent.duration.{Duration, SECONDS}
+
+class ConversionRatePeriodJson @Inject() (writeExchangeRateRepository: ExchangeRateRepository, config: Configuration)(
+  implicit ec: ExecutionContext
 ) extends ConversionRatePeriodRepository {
+  private val fallbackMonths    = config.get[Int]("fallback.months")
+  private val maxWaitTime       = 5
+  private val emptyFile: String = "empty"
 
   def getExchangeRateFileName(date: LocalDate): Future[String] = {
-    val targetFileName = currentFileName(date)
+    @tailrec
+    def findCurrentOrPreviousExchangeRateFile(current: Int, end: Int, givenDate: LocalDate): Future[String] = {
+      val returnedFile = Await.result(checkFileExists(givenDate), Duration(maxWaitTime, SECONDS))
+      returnedFile match {
+        case fileName if fileName != emptyFile => Future.successful(returnedFile)
+        case _ if current >= end               => Future.successful(emptyFile)
+        case _                                 =>
+          findCurrentOrPreviousExchangeRateFile(current + 1, end, givenDate.minusMonths(1))
+      }
+    }
 
+    findCurrentOrPreviousExchangeRateFile(0, fallbackMonths, date)
+  }
+
+  private def checkFileExists(date: LocalDate): Future[String] = {
+    val targetFileName = currentFileName(date)
     writeExchangeRateRepository.isDataPresent(targetFileName).map {
       case true => targetFileName
       case _    =>
-        logger.info(s"$targetFileName is not present")
+        logger.info(s"[ConversionRatePeriodJson] [checkFileExists] Tried file: $targetFileName and is not found")
         "empty"
     }
   }
@@ -47,7 +68,7 @@ class ConversionRatePeriodJson @Inject() (writeExchangeRateRepository: ExchangeR
       .map {
         case response if response.isEmpty =>
           logger.error(
-            s"XRS_FILE_CANNOT_BE_READ_ERROR [ConversionRatePeriodJson] Exchange rate file is not able to read"
+            s"[ConversionRatePeriodJson] [getExchangeRatesData] XRS_FILE_NOT_AVAILABLE_ERROR Exchange rate file is not able to read"
           )
           throw new RuntimeException("Exchange rate data is not able to read.")
         case response                     =>
@@ -56,7 +77,7 @@ class ConversionRatePeriodJson @Inject() (writeExchangeRateRepository: ExchangeR
               seq
             case _                 =>
               logger.error(
-                s"XRS_FILE_CANNOT_BE_READ_ERROR [ConversionRatePeriodJson] Exchange rate data mapping is failed"
+                s"[ConversionRatePeriodJson] [getExchangeRatesData] XRS_FILE_CANNOT_BE_READ_ERROR Exchange rate data mapping is failed"
               )
               throw new RuntimeException("Exchange rate data mapping is failed")
           }
@@ -92,22 +113,14 @@ class ConversionRatePeriodJson @Inject() (writeExchangeRateRepository: ExchangeR
       }
     }
 
-  def getLatestConversionRatePeriod(date: LocalDate): Future[ConversionRatePeriod] =
-    getExchangeRateFileName(date).flatMap { fileName =>
-      if (fileName.equals("empty")) {
-        logger.error(s"XRS_FILE_NOT_AVAILABLE_ERROR [ConversionRatePeriodJson] Exchange rate file is not available.")
-        Future.failed(new RuntimeException("Exchange rate file is not able to read."))
-      } else {
-        getExchangeRates(fileName).map { rates =>
-          ConversionRatePeriod(date.withDayOfMonth(1), date.withDayOfMonth(date.lengthOfMonth()), None, rates)
-        }
-      }
-    }
-
   def getCurrencyPeriod(date: LocalDate): Future[Option[CurrencyPeriod]] =
     getExchangeRateFileName(date).flatMap { fileName =>
-      getCurrencies(fileName).map { currencies =>
-        Some(CurrencyPeriod(date.withDayOfMonth(1), date.withDayOfMonth(date.lengthOfMonth()), currencies))
+      if (fileName.equals("empty")) {
+        Future.successful(None)
+      } else {
+        getCurrencies(fileName).map { currencies =>
+          Some(CurrencyPeriod(date.withDayOfMonth(1), date.withDayOfMonth(date.lengthOfMonth()), currencies))
+        }
       }
     }
 }

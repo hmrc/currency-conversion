@@ -26,6 +26,5 @@ import scala.concurrent.Future
 @ImplementedBy(classOf[ConversionRatePeriodJson])
 trait ConversionRatePeriodRepository {
   def getConversionRatePeriod(date: LocalDate): Future[Option[ConversionRatePeriod]]
-  def getLatestConversionRatePeriod(date: LocalDate): Future[ConversionRatePeriod]
   def getCurrencyPeriod(date: LocalDate): Future[Option[CurrencyPeriod]]
 }

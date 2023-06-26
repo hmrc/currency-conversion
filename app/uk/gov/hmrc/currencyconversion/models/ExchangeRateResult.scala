@@ -23,4 +23,3 @@ sealed trait ExchangeRateResult {
 }
 
 case class ExchangeRateSuccessResult(rate: JsObject) extends ExchangeRateResult
-case class ExchangeRateOldFileResult(rate: JsObject) extends ExchangeRateResult
