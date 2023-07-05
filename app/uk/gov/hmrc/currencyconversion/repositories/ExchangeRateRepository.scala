@@ -36,19 +36,20 @@ class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent)(i
       collectionName = "exchangeCurrencyData",
       mongoComponent = mongoComponent,
       domainFormat = ExchangeRateObject.format,
-      indexes = Seq()
+      indexes = Seq(),
+      replaceIndexes = true
     )
     with ExchangeRateRepository {
 
   private def date = LocalDate.now()
 
+  override lazy val requiresTtlIndex: Boolean = false
+
   def get(fileName: String): Future[Option[ExchangeRateObject]] =
     collection.find(equal("_id", Codecs.toBson(fileName))).headOption()
 
-  def isDataPresent(fileName: String): Future[Boolean] = {
-    val existingData = get(fileName)
-    existingData.map(value => value.isDefined)
-  }
+  def isDataPresent(fileName: String): Future[Boolean] =
+    get(fileName).map(value => value.isDefined)
 
   def insert(exchangeRateData: JsObject, forNextMonth: Boolean = false): Unit =
     Try {
