@@ -64,11 +64,11 @@ class ExchangeRateService @Inject() (exchangeRateRepository: ConversionRatePerio
     }
   }
 
-  def getCurrencies(date: LocalDate): Future[Option[CurrencyPeriod]] =
+  def getCurrencies(date: LocalDate): Future[CurrencyPeriod] =
     exchangeRateRepository.getCurrencyPeriod(date).flatMap {
       case Some(value) =>
         logger.info(s"[ExchangeRateService] [getCurrencies] getCurrencyPeriod has returned a valid file: $value")
-        Future.successful(Some(value))
+        Future.successful(value)
       case None        =>
         logger.error(
           s"[ExchangeRateService] [getCurrencies] XRS_FILE_NOT_AVAILABLE_ERROR No Exchange rate file is found with in the fallback period."

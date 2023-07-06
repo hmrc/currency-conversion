@@ -32,10 +32,10 @@ class DefaultExchangeRateRepositorySpec
     with Matchers
     with DefaultPlayMongoRepositorySupport[ExchangeRateObject] {
 
-  override def repository: DefaultExchangeRateRepository = new DefaultExchangeRateRepository(mongoComponent)
+  override val repository: DefaultExchangeRateRepository = new DefaultExchangeRateRepository(mongoComponent)
 
-  override def afterEach(): Unit = {
-    super.afterEach()
+  override def beforeEach(): Unit = {
+    super.beforeEach()
     prepareDatabase()
   }
 

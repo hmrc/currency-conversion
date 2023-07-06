@@ -41,9 +41,6 @@ class ExchangeRateController @Inject() (
   }
 
   def getCurrenciesByDate(date: LocalDate): Action[AnyContent] = Action.async {
-    exchangeRatesService.getCurrencies(date).map {
-      case Some(cp) => Ok(Json.toJson(cp))
-      case None     => NotFound
-    }
+    exchangeRatesService.getCurrencies(date).map(rates => Ok(Json.toJson(rates)))
   }
 }
