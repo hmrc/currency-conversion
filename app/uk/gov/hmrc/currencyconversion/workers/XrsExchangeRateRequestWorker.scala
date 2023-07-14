@@ -144,11 +144,6 @@ trait XrsExchangeRateRequest {
       )
     }
 
-    if (totalRates == nextMonthsRates) {
-      logger.error(
-        "[XrsExchangeRateRequest] [areRatesForNextMonth] XRS_FILE_DETECTED_FOR_NEXT_MONTH Inserting XRS file for next month"
-      )
-    }
     totalRates == nextMonthsRates
   }
 

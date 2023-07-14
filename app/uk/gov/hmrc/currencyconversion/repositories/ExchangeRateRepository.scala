@@ -55,14 +55,6 @@ class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent)(i
     Try {
       val data = ExchangeRateObject(mongoId(forNextMonth), exchangeRateData)
       collection.insertOne(data).toFuture()
-      if (forNextMonth) {
-        // Not really a warning, but this is the only way to generate alerts in Pager Duty without changing PROD log level to INFO
-        logger.warn(
-          s"XRS_FILE_INSERTED_FOR_NEXT_MONTH [ExchangeRateRepository] writing to mongo is successful ${mongoId(forNextMonth)}"
-        )
-      } else {
-        logger.info(s"[ExchangeRateRepository] writing to mongo is successful ${mongoId(forNextMonth)}")
-      }
     }
       .getOrElse {
         logger.error(s"[ExchangeRateRepository] XRS_FILE_CANNOT_BE_WRITTEN_ERROR " + s"writing to mongo is failed ")
