@@ -2,7 +2,7 @@ import sbt.*
 
 object AppDependencies {
 
-  private lazy val bootstrapPlayVersion = "7.19.0"
+  private lazy val bootstrapPlayVersion = "7.23.0"
   private lazy val hmrcMongoVersion     = "1.3.0"
 
   private lazy val compile: Seq[ModuleID] = Seq(
@@ -11,12 +11,12 @@ object AppDependencies {
   )
 
   private lazy val test: Seq[ModuleID] = Seq(
-    "uk.gov.hmrc"           %% "bootstrap-test-play-28"  % bootstrapPlayVersion,
-    "uk.gov.hmrc.mongo"     %% "hmrc-mongo-test-play-28" % hmrcMongoVersion,
-    "org.scalatest"         %% "scalatest"               % "3.2.16",
-    "org.mockito"           %% "mockito-scala-scalatest" % "1.17.14",
-    "com.github.tomakehurst" % "wiremock-standalone"     % "2.27.2",
-    "com.vladsch.flexmark"   % "flexmark-all"            % "0.64.8"
+    "uk.gov.hmrc"         %% "bootstrap-test-play-28"  % bootstrapPlayVersion,
+    "uk.gov.hmrc.mongo"   %% "hmrc-mongo-test-play-28" % hmrcMongoVersion,
+    "org.scalatest"       %% "scalatest"               % "3.2.17",
+    "org.mockito"         %% "mockito-scala-scalatest" % "1.17.30",
+    "org.wiremock"         % "wiremock-standalone"     % "3.3.1",
+    "com.vladsch.flexmark" % "flexmark-all"            % "0.64.8"
   ).map(_ % Test)
 
   def apply(): Seq[ModuleID]           = compile ++ test

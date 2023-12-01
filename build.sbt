@@ -12,10 +12,9 @@ lazy val microservice = Project(appName, file("."))
       "-language:implicitConversions",
       "-language:reflectiveCalls",
       "-language:postfixOps"
-    ),
-    retrieveManaged := true
+    )
   )
-  .settings(scalaVersion := "2.13.10")
+  .settings(scalaVersion := "2.13.12")
   .settings(majorVersion := 1)
   .settings(
     routesImport ++= Seq("uk.gov.hmrc.currencyconversion.binders.DateBinder._", "java.time._")
@@ -27,5 +26,5 @@ lazy val microservice = Project(appName, file("."))
   )
   .settings(PlayKeys.playDefaultPort := 9016)
 
-addCommandAlias("scalafmtAll", "all scalafmtSbt scalafmt test:scalafmt")
-addCommandAlias("scalastyleAll", "all scalastyle test:scalastyle")
+addCommandAlias("scalafmtAll", "all scalafmtSbt scalafmt Test/scalafmt")
+addCommandAlias("scalastyleAll", "all scalastyle Test/scalastyle")
