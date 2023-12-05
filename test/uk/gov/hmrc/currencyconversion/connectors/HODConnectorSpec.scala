@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.currencyconversion.connectors
 
-import com.codahale.metrics.SharedMetricRegistries
 import com.github.tomakehurst.wiremock.client.MappingBuilder
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatest.BeforeAndAfterEach
@@ -39,9 +38,6 @@ class HODConnectorSpec
     with IntegrationPatience
     with BeforeAndAfterEach {
 
-  override def beforeEach(): Unit =
-    SharedMetricRegistries.clear()
-
   override lazy val app: Application =
     new GuiceApplicationBuilder()
       .configure(
@@ -59,7 +55,6 @@ class HODConnectorSpec
   "HODConnector" - {
 
     "must call the HOD when xrs worker thread is started" in {
-
       server.stubFor(
         stubCall
           .willReturn(aResponse().withStatus(OK))
@@ -68,11 +63,11 @@ class HODConnectorSpec
     }
 
     "must fall back to a 503 (SERVICE_UNAVAILABLE) when the circuit breaker handles" - {
-      def test(statusCode: Int): Unit =
-        s"an invalid status code $statusCode" in {
+      def test(status: Int): Unit =
+        s"2xx statuses and above with an invalid status $status" in {
           server.stubFor(
             stubCall
-              .willReturn(aResponse().withStatus(statusCode))
+              .willReturn(aResponse().withStatus(status))
           )
 
           connector.submit().futureValue.status mustBe SERVICE_UNAVAILABLE
@@ -84,12 +79,24 @@ class HODConnectorSpec
           field.get(field.getName)
         }
         .flatMap {
-          case fieldValue: java.lang.Integer if fieldValue != OK => Some(fieldValue.toInt)
-          case _                                                 => None
+          case fieldValue: java.lang.Integer
+              if fieldValue != CONTINUE && fieldValue != SWITCHING_PROTOCOLS && fieldValue != OK =>
+            Some(fieldValue.toInt)
+          case _ => None
         }
 
       invalidStatusResponses.foreach(status => test(status))
 
+      Seq(CONTINUE, SWITCHING_PROTOCOLS).foreach { status =>
+        s"1xx statuses with an invalid status $status" in {
+          server.stubFor(
+            stubCall
+              .willReturn(aResponse().withStatus(status))
+          )
+
+          connector.submit().futureValue.status mustBe SERVICE_UNAVAILABLE
+        }
+      }
     }
   }
 
