@@ -17,14 +17,15 @@
 package uk.gov.hmrc.currencyconversion.connectors
 
 import akka.pattern.CircuitBreaker
-import com.google.inject.name.Named
 import com.google.inject.Inject
-import play.api.http.{ContentTypes, HeaderNames}
+import com.google.inject.name.Named
 import play.api.Configuration
-import play.api.http.Status.SERVICE_UNAVAILABLE
+import play.api.http.Status.{OK, SERVICE_UNAVAILABLE}
+import play.api.http.{ContentTypes, HeaderNames}
 import play.api.libs.json.{JsValue, Json}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 import uk.gov.hmrc.currencyconversion.models.Service
+import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
 import java.util.UUID
 import javax.inject.Singleton
@@ -60,7 +61,11 @@ class HODConnector @Inject() (
         )
 
     def call(implicit hc: HeaderCarrier): Future[HttpResponse] =
-      http.POST[JsValue, HttpResponse](s"$baseUrl$xrsEndPoint", Json.parse("""{}"""))
+      http.POST[JsValue, HttpResponse](s"$baseUrl$xrsEndPoint", Json.parse("""{}""")).map { response =>
+        (response.status: @unchecked) match {
+          case OK => HttpResponse(OK, response.body)
+        }
+      }
 
     circuitBreaker
       .withCircuitBreaker(call)
