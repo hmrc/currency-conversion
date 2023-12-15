@@ -16,16 +16,16 @@
 
 package uk.gov.hmrc.currencyconversion.connectors
 
-import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
-import org.joda.time.{DateTime, DateTimeZone}
+import java.time.format.DateTimeFormatter
+import java.time.{LocalDateTime, ZoneId}
 
 trait HttpDate {
 
-  protected val dateFormatter: DateTimeFormatter =
-    DateTimeFormat
-      .forPattern("EEE, dd MMM yyyy HH:mm:ss 'GMT'")
-      .withZone(DateTimeZone.UTC)
+  private val dateFormatter: DateTimeFormatter =
+    DateTimeFormatter
+      .ofPattern("EEE, dd MMM yyyy HH:mm:ss 'GMT'")
 
   def now: String =
-    dateFormatter.print(DateTime.now.withZone(DateTimeZone.UTC))
+    dateFormatter.format(LocalDateTime.now(ZoneId.of("UTC")))
+
 }
