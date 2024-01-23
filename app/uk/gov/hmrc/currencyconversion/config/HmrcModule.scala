@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.currencyconversion.config
 
-import akka.pattern.CircuitBreaker
+import org.apache.pekko.pattern.CircuitBreaker
 import play.api.inject.{Binding, Module}
 import play.api.{Configuration, Environment}
 import uk.gov.hmrc.currencyconversion.workers.XrsExchangeRateRequestWorker

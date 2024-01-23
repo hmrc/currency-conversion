@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.currencyconversion.connectors
 
-import akka.pattern.CircuitBreaker
+import org.apache.pekko.pattern.CircuitBreaker
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import play.api.Configuration
