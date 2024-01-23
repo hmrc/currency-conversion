@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.currencyconversion.workers
 
-import akka.stream.scaladsl.{Keep, Sink, SinkQueueWithCancel, Source}
-import akka.stream.{ActorAttributes, Materializer, Supervision}
 import com.google.inject.{Inject, Singleton}
+import org.apache.pekko.stream.scaladsl.{Keep, Sink, SinkQueueWithCancel, Source}
+import org.apache.pekko.stream.{ActorAttributes, Materializer, Supervision}
 import play.api.Configuration
 import play.api.http.Status.SERVICE_UNAVAILABLE
 import play.api.i18n.Lang.logger.logger

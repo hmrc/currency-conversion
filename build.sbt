@@ -1,10 +1,14 @@
+import uk.gov.hmrc.DefaultBuildSettings
+
 val appName = "currency-conversion"
+
+ThisBuild / majorVersion := 1
+ThisBuild / scalaVersion := "2.13.12"
 
 lazy val microservice = Project(appName, file("."))
   .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
+  .settings(CodeCoverageSettings.settings)
   .settings(
-    // To resolve a bug with version 2.x.x of the scoverage plugin - https://github.com/sbt/sbt/issues/6997
-    libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always,
     libraryDependencies ++= AppDependencies(),
     scalacOptions ++= Seq(
       "-feature",
@@ -19,12 +23,13 @@ lazy val microservice = Project(appName, file("."))
   .settings(
     routesImport ++= Seq("uk.gov.hmrc.currencyconversion.binders.DateBinder._", "java.time._")
   )
-  .settings(
-    coverageExcludedFiles := "<empty>;.*Routes.*;",
-    coverageMinimumStmtTotal := 96,
-    coverageFailOnMinimum := true
-  )
   .settings(PlayKeys.playDefaultPort := 9016)
+
+lazy val it = project
+  .enablePlugins(PlayScala)
+  .dependsOn(microservice % "test->test")
+  .settings(DefaultBuildSettings.itSettings())
+  .settings(libraryDependencies ++= AppDependencies.itDependencies)
 
 addCommandAlias("scalafmtAll", "all scalafmtSbt scalafmt Test/scalafmt")
 addCommandAlias("scalastyleAll", "all scalastyle Test/scalastyle")
