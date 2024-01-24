@@ -3,14 +3,8 @@ import scoverage.ScoverageKeys.*
 
 object CodeCoverageSettings {
 
-  private val excludedPackages: Seq[String] =
-    Seq(
-      "<empty>",
-      ".*Routes.*"
-    )
-
   val settings: Seq[Setting[?]] = Seq(
-    coverageExcludedPackages := excludedPackages.mkString(";"),
+    coverageExcludedFiles := "<empty>;.*Routes.*;",
     coverageMinimumStmtTotal := 96,
     coverageFailOnMinimum := true,
     coverageHighlighting := true
