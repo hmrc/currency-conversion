@@ -33,3 +33,7 @@ NB: If an exchange rate file cannot be found, an error will be logged and a `WAR
 
 ## Testing
 To run the tests locally, simply run `./run_all_tests.sh`
+
+## License
+
+This code is open source software licensed under the [Apache 2.0 License]("http://www.apache.org/licenses/LICENSE-2.0.html").

@@ -1,5 +1,3 @@
-import uk.gov.hmrc.DefaultBuildSettings
-
 val appName = "currency-conversion"
 
 ThisBuild / majorVersion := 1
