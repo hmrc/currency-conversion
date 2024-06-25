@@ -17,8 +17,8 @@
 package uk.gov.hmrc.currencyconversion.workers
 
 import com.github.tomakehurst.wiremock.client.WireMock._
+import org.mockito.Mockito
 import org.mockito.Mockito.doReturn
-import org.mockito.MockitoSugar.mock
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
@@ -227,7 +227,7 @@ class XrsExchangeRateRequestWorkerSpec
     val rateRequest                = new XrsExchangeRateRequest {
       override private[workers] def now = LocalDate.of(year, month, dayOfMonth)
     }
-    val mockExchangeRateRepository = mock[ExchangeRateRepository]
+    val mockExchangeRateRepository = Mockito.mock(classOf[ExchangeRateRepository])
     doReturn(Future.successful(false)) when mockExchangeRateRepository isDataPresent "exrates-monthly-0722"
     false shouldBe await(rateRequest.isNextMonthsFileIsReceived(mockExchangeRateRepository))
   }
@@ -236,7 +236,7 @@ class XrsExchangeRateRequestWorkerSpec
     val rateRequest                = new XrsExchangeRateRequest {
       override private[workers] def now = LocalDate.of(year, month, dayOfMonth)
     }
-    val mockExchangeRateRepository = mock[ExchangeRateRepository]
+    val mockExchangeRateRepository = Mockito.mock(classOf[ExchangeRateRepository])
     doReturn(Future.successful(true)) when mockExchangeRateRepository isDataPresent "exrates-monthly-0722"
     true shouldBe await(rateRequest.isNextMonthsFileIsReceived(mockExchangeRateRepository))
   }

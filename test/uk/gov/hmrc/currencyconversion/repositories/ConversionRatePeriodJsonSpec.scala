@@ -18,7 +18,8 @@ package uk.gov.hmrc.currencyconversion.repositories
 
 import java.time.LocalDate
 import org.mockito.ArgumentMatchers.any
-import org.mockito.MockitoSugar
+import org.mockito.Mockito
+import org.mockito.Mockito.when
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.Configuration
@@ -29,9 +30,9 @@ import uk.gov.hmrc.currencyconversion.models._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class ConversionRatePeriodJsonSpec extends AnyWordSpecLike with Matchers with MockitoSugar {
+class ConversionRatePeriodJsonSpec extends AnyWordSpecLike with Matchers {
 
-  private val mockExchangeRateRepository: ExchangeRateRepository = mock[ExchangeRateRepository]
+  private val mockExchangeRateRepository: ExchangeRateRepository = Mockito.mock(classOf[ExchangeRateRepository])
   private val mockConfiguration: Configuration                   = Configuration("fallback.months" -> 6)
 
   private val conversionRatePeriodJson: ConversionRatePeriodJson = new ConversionRatePeriodJson(
