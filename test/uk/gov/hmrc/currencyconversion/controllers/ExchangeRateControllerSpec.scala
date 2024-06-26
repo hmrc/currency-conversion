@@ -17,32 +17,28 @@
 package uk.gov.hmrc.currencyconversion.controllers
 
 import com.codahale.metrics.SharedMetricRegistries
-import org.mockito.{Mockito, MockitoSugar}
+import org.mockito.Mockito
+import org.mockito.Mockito.doReturn
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.Application
 import play.api.http.Status
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsArray, JsObject, Json}
+import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.currencyconversion.repositories.ExchangeRateRepository
-import play.api.Application
 import uk.gov.hmrc.currencyconversion.models.ExchangeRateObject
-
-import scala.concurrent.Future._
-import org.scalatest.wordspec.AnyWordSpecLike
-import play.api.mvc.Result
+import uk.gov.hmrc.currencyconversion.repositories.ExchangeRateRepository
 
 import scala.concurrent.Future
+import scala.concurrent.Future._
 
-class ExchangeRateControllerSpec
-    extends AnyWordSpecLike
-    with GuiceOneAppPerSuite
-    with MockitoSugar
-    with BeforeAndAfterEach {
+class ExchangeRateControllerSpec extends AnyWordSpecLike with GuiceOneAppPerSuite with BeforeAndAfterEach {
 
-  private lazy val exchangeRateRepository = mock[ExchangeRateRepository]
+  private lazy val exchangeRateRepository = Mockito.mock(classOf[ExchangeRateRepository])
 
   override def beforeEach(): Unit = {
     Mockito.reset(exchangeRateRepository)

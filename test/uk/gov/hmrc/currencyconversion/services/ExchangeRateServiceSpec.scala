@@ -17,9 +17,9 @@
 package uk.gov.hmrc.currencyconversion.services
 
 import java.time.LocalDate
-
 import org.mockito.ArgumentMatchers.any
-import org.mockito.MockitoSugar
+import org.mockito.Mockito
+import org.mockito.Mockito.when
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.test.Helpers._
@@ -29,9 +29,10 @@ import uk.gov.hmrc.currencyconversion.repositories.ConversionRatePeriodRepositor
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class ExchangeRateServiceSpec extends AnyWordSpecLike with Matchers with MockitoSugar {
+class ExchangeRateServiceSpec extends AnyWordSpecLike with Matchers {
 
-  private val mockConversionRatePeriodRepository: ConversionRatePeriodRepository = mock[ConversionRatePeriodRepository]
+  private val mockConversionRatePeriodRepository: ConversionRatePeriodRepository =
+    Mockito.mock(classOf[ConversionRatePeriodRepository])
 
   private val exchangeRateService: ExchangeRateService = new ExchangeRateService(mockConversionRatePeriodRepository)
 
