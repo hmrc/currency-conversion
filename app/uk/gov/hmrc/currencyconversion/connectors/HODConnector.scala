@@ -16,16 +16,17 @@
 
 package uk.gov.hmrc.currencyconversion.connectors
 
-import org.apache.pekko.pattern.CircuitBreaker
 import com.google.inject.Inject
 import com.google.inject.name.Named
+import org.apache.pekko.pattern.CircuitBreaker
 import play.api.Configuration
 import play.api.http.Status.{OK, SERVICE_UNAVAILABLE}
 import play.api.http.{ContentTypes, HeaderNames}
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.Json
 import uk.gov.hmrc.currencyconversion.models.Service
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
 
 import java.util.UUID
 import javax.inject.Singleton
@@ -33,7 +34,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class HODConnector @Inject() (
-  http: HttpClient,
+  http: HttpClientV2,
   config: Configuration,
   @Named("des") circuitBreaker: CircuitBreaker
 )(implicit ec: ExecutionContext)
@@ -46,6 +47,9 @@ class HODConnector @Inject() (
 
   private val CORRELATION_ID: String = "X-Correlation-ID"
   private val ENVIRONMENT: String    = "Environment"
+
+  private val xrsFullUrl    = s"$baseUrl$xrsEndPoint"
+  private val emptyJsonBody = Json.parse("""{}""")
 
   def submit(): Future[HttpResponse] = {
 
@@ -61,11 +65,15 @@ class HODConnector @Inject() (
         )
 
     def call(implicit hc: HeaderCarrier): Future[HttpResponse] =
-      http.POST[JsValue, HttpResponse](s"$baseUrl$xrsEndPoint", Json.parse("""{}""")).map { response =>
-        (response.status: @unchecked) match {
-          case OK => HttpResponse(OK, response.body)
+      http
+        .post(url"$xrsFullUrl")
+        .withBody(emptyJsonBody)
+        .execute[HttpResponse]
+        .map { response =>
+          response.status match {
+            case OK => HttpResponse(OK, response.body)
+          }
         }
-      }
 
     circuitBreaker
       .withCircuitBreaker(call)
