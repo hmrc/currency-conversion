@@ -27,7 +27,7 @@ import uk.gov.hmrc.currencyconversion.connectors.HODConnector
 import uk.gov.hmrc.currencyconversion.models.ExchangeRateData
 import uk.gov.hmrc.currencyconversion.repositories.ExchangeRateRepository
 import uk.gov.hmrc.currencyconversion.utils.MongoIdHelper.currentFileName
-import uk.gov.hmrc.http.HttpReads.{is2xx, is4xx}
+import uk.gov.hmrc.http.HttpErrorFunctions.{is2xx, is4xx}
 import uk.gov.hmrc.http.HttpResponse
 
 import java.time.LocalDate
