@@ -76,11 +76,6 @@ class XrsExchangeRateRequestWorker @Inject() (
         val response = hodConnector.submit().flatMap {
           case response: HttpResponse if is2xx(response.status) =>
             successfulResponse(response)
-          case response: HttpResponse if is4xx(response.status) => //TODO: this block is dead code that needs cleanup
-            logger.error(
-              s"[XrsExchangeRateRequestWorker] XRS_BAD_REQUEST_FROM_EIS_ERROR call to DES (EIS) is failed. ${response.toString}"
-            )
-            Future.successful(response)
           case _                                                =>
             logger.error(
               s"[XrsExchangeRateRequestWorker] XRS_BAD_REQUEST_FROM_EIS_ERROR BAD Request is received from DES (EIS)"
