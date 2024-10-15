@@ -78,7 +78,7 @@ class XrsExchangeRateRequestWorker @Inject() (
             successfulResponse(response)
           case _                                                =>
             logger.error(
-              s"[XrsExchangeRateRequestWorker] XRS_BAD_REQUEST_FROM_EIS_ERROR BAD Request is received from DES (EIS)"
+              s"[XrsExchangeRateRequestWorker][tap] XRS_BAD_REQUEST_FROM_EIS_ERROR BAD Request is received from DES (EIS)"
             )
             Future.successful(HttpResponse(SERVICE_UNAVAILABLE, "Service Unavailable"))
         }
@@ -106,7 +106,7 @@ class XrsExchangeRateRequestWorker @Inject() (
     Try {
       response.json.as[JsObject]
     } recoverWith { case e: Throwable =>
-      logger.error("[XrsExchangeRateRequestWorker] [getResponseJson] Cannot convert response to JSON")
+      logger.error("[XrsExchangeRateRequestWorker][getResponseJson] Cannot convert response to JSON")
       Failure(e)
     }
 
@@ -134,14 +134,14 @@ trait XrsExchangeRateRequest {
 
     if (nextMonthsRates > 0 && totalRates != nextMonthsRates) {
       logger.error(
-        s"[XrsExchangeRateRequest] [areRatesForNextMonth] XRS_FILE_HAS_MIXED_MONTHS_ERROR Exchange rates file has a mixture of months. " +
+        s"[XrsExchangeRateRequest][areRatesForNextMonth] XRS_FILE_HAS_MIXED_MONTHS_ERROR Exchange rates file has a mixture of months. " +
           s"Total rates=$totalRates, next months rates=$nextMonthsRates, expired rates=$expiredRates."
       )
     }
 
     if (totalRates == nextMonthsRates) {
       logger.error(
-        "[XrsExchangeRateRequest] [areRatesForNextMonth] XRS_FILE_DETECTED_FOR_NEXT_MONTH Inserting XRS file for next month"
+        "[XrsExchangeRateRequest][areRatesForNextMonth] XRS_FILE_DETECTED_FOR_NEXT_MONTH Inserting XRS file for next month"
       )
     }
     totalRates == nextMonthsRates
@@ -155,10 +155,10 @@ trait XrsExchangeRateRequest {
     val isPresent = writeExchangeRateRepository.isDataPresent(fileName)
 
     isPresent.map {
-      case true  => logger.info(s"[XrsExchangeRateRequest] [verifyIfNextMonthsFileIsReceived] $fileName exists")
+      case true  => logger.info(s"[XrsExchangeRateRequest][isNextMonthsFileIsReceived] $fileName exists")
       case false =>
         logger.error(
-          s"[XrsExchangeRateRequest] [verifyIfNextMonthsFileIsReceived] XRS_FILE_NEXT_MONTH_NOT_RECEIVED $fileName"
+          s"[XrsExchangeRateRequest][isNextMonthsFileIsReceived] XRS_FILE_NEXT_MONTH_NOT_RECEIVED $fileName"
         )
     }
 
@@ -170,18 +170,18 @@ trait XrsExchangeRateRequest {
       case Success(exchangeRateData) =>
         if (exchangeRateData.exchangeData.isEmpty) {
           logger.error(
-            "[XrsExchangeRateRequestWorker] [verifyExchangeDataIsNotEmpty] XRS_EMPTY_RATES_FILE_ERROR Exchange Data size is 0"
+            "[XrsExchangeRateRequestWorker][verifyExchangeDataIsNotEmpty] XRS_EMPTY_RATES_FILE_ERROR Exchange Data size is 0"
           )
         } else {
           logger.info(
-            s"[XrsExchangeRateRequestWorker] [verifyExchangeDataIsNotEmpty] " +
+            s"[XrsExchangeRateRequestWorker][verifyExchangeDataIsNotEmpty] " +
               s"Exchange Data size is ${exchangeRateData.exchangeData.size} with timestamp ${exchangeRateData.timestamp}"
           )
         }
         exchangeRateData.exchangeData.nonEmpty
       case Failure(exception)        =>
         logger.error(
-          "[XrsExchangeRateRequestWorker] [verifyExchangeDataIsNotEmpty] XRS_RATES_FILE_INVALID_FORMAT " +
+          "[XrsExchangeRateRequestWorker][verifyExchangeDataIsNotEmpty] XRS_RATES_FILE_INVALID_FORMAT " +
             "Cannot convert response JSON to ExchangeRateData",
           exception
         )

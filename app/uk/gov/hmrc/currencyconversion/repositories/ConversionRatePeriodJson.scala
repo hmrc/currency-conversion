@@ -57,7 +57,7 @@ class ConversionRatePeriodJson @Inject() (writeExchangeRateRepository: ExchangeR
     writeExchangeRateRepository.isDataPresent(targetFileName).map {
       case true => targetFileName
       case _    =>
-        logger.info(s"[ConversionRatePeriodJson] [checkFileExists] Tried file: $targetFileName and is not found")
+        logger.info(s"[ConversionRatePeriodJson][checkFileExists] Tried file: $targetFileName and is not found")
         "empty"
     }
   }
@@ -68,7 +68,7 @@ class ConversionRatePeriodJson @Inject() (writeExchangeRateRepository: ExchangeR
       .map {
         case response if response.isEmpty =>
           logger.error(
-            s"[ConversionRatePeriodJson] [getExchangeRatesData] XRS_FILE_NOT_AVAILABLE_ERROR Exchange rate file is not able to read"
+            s"[ConversionRatePeriodJson][getExchangeRatesData] XRS_FILE_NOT_AVAILABLE_ERROR Exchange rate file is not able to read"
           )
           throw new RuntimeException("Exchange rate data is not able to read.")
         case response                     =>
@@ -77,7 +77,7 @@ class ConversionRatePeriodJson @Inject() (writeExchangeRateRepository: ExchangeR
               seq
             case _                 =>
               logger.error(
-                s"[ConversionRatePeriodJson] [getExchangeRatesData] XRS_FILE_CANNOT_BE_READ_ERROR Exchange rate data mapping is failed"
+                s"[ConversionRatePeriodJson][getExchangeRatesData] XRS_FILE_CANNOT_BE_READ_ERROR Exchange rate data mapping is failed"
               )
               throw new RuntimeException("Exchange rate data mapping is failed")
           }

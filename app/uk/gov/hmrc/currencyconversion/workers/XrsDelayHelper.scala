@@ -31,7 +31,7 @@ class XrsDelayHelper {
       val refreshTime  = now.plusDays(1).withHour(0).withMinute(1).withSecond(0).withNano(0)
       val refreshDelay = Duration(ChronoUnit.MINUTES.between(now, refreshTime), TimeUnit.MINUTES)
       logger.info(
-        s"[XrsExchangeRateRequestWorker] Time of deployment: $now, Checking for rates file in ${refreshDelay.toMinutes} minutes"
+        s"[XrsExchangeRateRequestWorker][calculateInitialDelay] Time of deployment: $now, Checking for rates file in ${refreshDelay.toMinutes} minutes"
       )
       refreshDelay
     } else {
