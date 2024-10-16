@@ -58,14 +58,16 @@ class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent)(i
       if (forNextMonth) {
         // Not really a warning, but this is the only way to generate alerts in Pager Duty without changing PROD log level to INFO
         logger.warn(
-          s"XRS_FILE_INSERTED_FOR_NEXT_MONTH [ExchangeRateRepository] writing to mongo is successful ${mongoId(forNextMonth)}"
+          s"[DefaultExchangeRateRepository][insert] XRS_FILE_INSERTED_FOR_NEXT_MONTH writing to mongo is successful ${mongoId(forNextMonth)}"
         )
       } else {
-        logger.info(s"[ExchangeRateRepository] writing to mongo is successful ${mongoId(forNextMonth)}")
+        logger.info(s"[DefaultExchangeRateRepository][insert] writing to mongo is successful ${mongoId(forNextMonth)}")
       }
     }
       .getOrElse {
-        logger.error(s"[ExchangeRateRepository] XRS_FILE_CANNOT_BE_WRITTEN_ERROR " + s"writing to mongo is failed ")
+        logger.error(
+          "[DefaultExchangeRateRepository][insert] XRS_FILE_CANNOT_BE_WRITTEN_ERROR writing to mongo has failed"
+        )
         throw new Exception(s"unable to insert exchangeRateRepository")
       }
 
@@ -81,10 +83,12 @@ class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent)(i
           options = FindOneAndUpdateOptions().upsert(false).returnDocument(ReturnDocument.AFTER)
         )
         .toFuture()
-      logger.info(s"[ExchangeRateRepository] writing to mongo is successful ${mongoId(forNextMonth)}")
+      logger.info(s"[DefaultExchangeRateRepository][update] writing to mongo is successful ${mongoId(forNextMonth)}")
     }
       .getOrElse {
-        logger.error(s"[ExchangeRateRepository] XRS_FILE_CANNOT_BE_WRITTEN_ERROR " + s"writing to mongo is failed")
+        logger.error(
+          "[DefaultExchangeRateRepository][update] XRS_FILE_CANNOT_BE_WRITTEN_ERROR " + s"writing to mongo is failed"
+        )
         throw new Exception(s"unable to insert exchangeRateRepository ")
       }
 
@@ -93,8 +97,11 @@ class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent)(i
     val oldFileName     = currentFileName(sixMonthOldDate)
 
     collection.findOneAndDelete(equal("_id", oldFileName)).toFutureOption() map {
-      case Some(_) => logger.info(s"[ExchangeRateRepository] deleting older data from mongo is successful $oldFileName")
-      case _       => logger.warn(s"[ExchangeRateRepository] no older data is available")
+      case Some(_) =>
+        logger.info(
+          s"[DefaultExchangeRateRepository][deleteOlderExchangeData] deleting older data from mongo is successful $oldFileName"
+        )
+      case _       => logger.warn("[DefaultExchangeRateRepository][deleteOlderExchangeData] no older data is available")
     }
   }
 
