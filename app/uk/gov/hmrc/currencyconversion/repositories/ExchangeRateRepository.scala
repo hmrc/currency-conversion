@@ -66,7 +66,7 @@ class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent)(i
     }
       .getOrElse {
         logger.error(
-          s"[DefaultExchangeRateRepository][insert] XRS_FILE_CANNOT_BE_WRITTEN_ERROR writing to mongo has failed"
+          "[DefaultExchangeRateRepository][insert] XRS_FILE_CANNOT_BE_WRITTEN_ERROR writing to mongo has failed"
         )
         throw new Exception(s"unable to insert exchangeRateRepository")
       }
@@ -87,7 +87,7 @@ class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent)(i
     }
       .getOrElse {
         logger.error(
-          s"[DefaultExchangeRateRepository][update] XRS_FILE_CANNOT_BE_WRITTEN_ERROR " + s"writing to mongo is failed"
+          "[DefaultExchangeRateRepository][update] XRS_FILE_CANNOT_BE_WRITTEN_ERROR " + s"writing to mongo is failed"
         )
         throw new Exception(s"unable to insert exchangeRateRepository ")
       }
@@ -101,7 +101,7 @@ class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent)(i
         logger.info(
           s"[DefaultExchangeRateRepository][deleteOlderExchangeData] deleting older data from mongo is successful $oldFileName"
         )
-      case _       => logger.warn(s"[DefaultExchangeRateRepository][deleteOlderExchangeData] no older data is available")
+      case _       => logger.warn("[DefaultExchangeRateRepository][deleteOlderExchangeData] no older data is available")
     }
   }
 
