@@ -1,7 +1,7 @@
 val appName = "currency-conversion"
 
 ThisBuild / majorVersion := 1
-ThisBuild / scalaVersion := "2.13.14"
+ThisBuild / scalaVersion := "3.5.2"
 
 lazy val microservice = Project(appName, file("."))
   .enablePlugins(PlayScala, SbtDistributablesPlugin)
