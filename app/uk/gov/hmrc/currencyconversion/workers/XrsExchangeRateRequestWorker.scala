@@ -44,7 +44,7 @@ class XrsExchangeRateRequestWorker @Inject() (
   hodConnector: HODConnector,
   writeExchangeRateRepository: ExchangeRateRepository,
   xrsDelayHelper: XrsDelayHelper
-)(implicit mat: Materializer, ec: ExecutionContext)
+)(using mat: Materializer, ec: ExecutionContext)
     extends XrsExchangeRateRequest {
 
   private val initialDelayFromConfig               = config.get[String]("workers.xrs-exchange-rate.initial-delay").replace('.', ' ')

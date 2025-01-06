@@ -23,7 +23,7 @@ import uk.gov.hmrc.currencyconversion.workers.XrsExchangeRateRequestWorker
 import uk.gov.hmrc.currencyconversion.repositories.{DefaultExchangeRateRepository, ExchangeRateRepository}
 
 class HmrcModule extends Module {
-  override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] =
+  override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[?]] =
     Seq(
       bind[ExchangeRateRepository].to[DefaultExchangeRateRepository].eagerly(),
       bind[CircuitBreaker].qualifiedWith("des").toProvider[DesCircuitBreakerProvider],
