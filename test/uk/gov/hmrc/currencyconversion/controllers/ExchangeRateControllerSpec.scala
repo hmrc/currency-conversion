@@ -18,9 +18,9 @@ package uk.gov.hmrc.currencyconversion.controllers
 
 import com.codahale.metrics.SharedMetricRegistries
 import org.mockito.Mockito
-import org.mockito.Mockito.doReturn
+import org.mockito.Mockito.{reset, when}
 import org.scalatest.BeforeAndAfterEach
-import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
@@ -29,36 +29,49 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsArray, JsObject, Json}
 import play.api.mvc.Result
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.currencyconversion.models.ExchangeRateObject
 import uk.gov.hmrc.currencyconversion.repositories.ExchangeRateRepository
 
 import scala.concurrent.Future
-import scala.concurrent.Future._
+import scala.concurrent.Future.*
 
-class ExchangeRateControllerSpec extends AnyWordSpecLike with GuiceOneAppPerSuite with BeforeAndAfterEach {
+class ExchangeRateControllerSpec
+    extends AnyWordSpecLike
+    with GuiceOneAppPerSuite
+    with BeforeAndAfterEach
+    with Matchers {
 
   private lazy val exchangeRateRepository = Mockito.mock(classOf[ExchangeRateRepository])
 
   override def beforeEach(): Unit = {
-    Mockito.reset(exchangeRateRepository)
+    reset(exchangeRateRepository)
     val exchangeRate: ExchangeRateObject = ExchangeRateObject("exrates-monthly-0919", Json.parse(data).as[JsObject])
-    doReturn(Future.successful(true)) when exchangeRateRepository isDataPresent "exrates-monthly-0919"
-    doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-1019"
-    doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-1119"
-    doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-1219"
-    doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-0120"
-    doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-0220"
-    doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-0320"
-    doReturn(Future.successful(false)) when exchangeRateRepository isDataPresent "exrates-monthly-0420"
-    doReturn(successful(Some(exchangeRate))) when exchangeRateRepository get "exrates-monthly-0919"
+    when(exchangeRateRepository.isDataPresent("exrates-monthly-0919"))
+      .thenReturn(Future.successful(true))
+    when(exchangeRateRepository.isDataPresent("exrates-monthly-1019"))
+      .thenReturn(Future.successful(false))
+    when(exchangeRateRepository.isDataPresent("exrates-monthly-1119"))
+      .thenReturn(Future.successful(false))
+    when(exchangeRateRepository.isDataPresent("exrates-monthly-1219"))
+      .thenReturn(Future.successful(false))
+    when(exchangeRateRepository.isDataPresent("exrates-monthly-0120"))
+      .thenReturn(Future.successful(false))
+    when(exchangeRateRepository.isDataPresent("exrates-monthly-0220"))
+      .thenReturn(Future.successful(false))
+    when(exchangeRateRepository.isDataPresent("exrates-monthly-0320"))
+      .thenReturn(Future.successful(false))
+    when(exchangeRateRepository.isDataPresent("exrates-monthly-0420"))
+      .thenReturn(Future.successful(false))
+    when(exchangeRateRepository.get("exrates-monthly-0919"))
+      .thenReturn(successful(Some(exchangeRate)))
 
     SharedMetricRegistries.clear()
   }
 
   override lazy val app: Application = {
 
-    import play.api.inject._
+    import play.api.inject.*
 
     new GuiceApplicationBuilder()
       .overrides(

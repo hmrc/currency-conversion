@@ -17,8 +17,8 @@
 package uk.gov.hmrc.currencyconversion.services
 
 import play.api.i18n.Lang.logger.logger
-import play.api.libs.json._
-import uk.gov.hmrc.currencyconversion.models._
+import play.api.libs.json.*
+import uk.gov.hmrc.currencyconversion.models.*
 import uk.gov.hmrc.currencyconversion.repositories.ConversionRatePeriodRepository
 
 import java.time.LocalDate

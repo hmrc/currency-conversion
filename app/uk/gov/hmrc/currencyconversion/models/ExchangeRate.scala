@@ -31,15 +31,15 @@ case class ExchangeRate(
 
 object ExchangeRate {
 
-  implicit lazy val reads: Reads[ExchangeRate] = (
+  given reads: Reads[ExchangeRate] = (
     (__ \ "validFrom").read[LocalDate] and
       (__ \ "validTo").read[LocalDate] and
       (__ \ "currencyCode").read[String] and
       (__ \ "exchangeRate").read[BigDecimal] and
       (__ \ "currencyName").read[String]
-  )(ExchangeRate.apply _)
+  )(ExchangeRate.apply)
 
-  implicit lazy val writes: OWrites[ExchangeRate] = Json.writes[ExchangeRate]
+  given writes: OWrites[ExchangeRate] = Json.writes[ExchangeRate]
 }
 case class ExchangeRateData(
   timestamp: String,
@@ -49,11 +49,11 @@ case class ExchangeRateData(
 
 object ExchangeRateData {
 
-  implicit lazy val reads: Reads[ExchangeRateData] = (
+  given reads: Reads[ExchangeRateData] = (
     (__ \ "timestamp").read[String] and
       (__ \ "correlationid").read[String] and
       (__ \ "exchangeRates").readWithDefault[Seq[ExchangeRate]](Seq.empty)
-  )(ExchangeRateData.apply _)
+  )(ExchangeRateData.apply)
 
-  implicit lazy val writes: OWrites[ExchangeRateData] = Json.writes[ExchangeRateData]
+  given writes: OWrites[ExchangeRateData] = Json.writes[ExchangeRateData]
 }

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.currencyconversion.utils
 
-import org.scalatest.matchers.must.Matchers._
+import org.scalatest.matchers.must.Matchers.*
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 

@@ -5,7 +5,7 @@ object CodeCoverageSettings {
 
   val settings: Seq[Setting[?]] = Seq(
     coverageExcludedFiles := "<empty>;.*Routes.*;",
-    coverageMinimumStmtTotal := 96,
+    coverageMinimumStmtTotal := 97,
     coverageFailOnMinimum := true,
     coverageHighlighting := true
   )

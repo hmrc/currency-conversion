@@ -25,6 +25,7 @@ import uk.gov.hmrc.currencyconversion.models.ExchangeRateObject
 import uk.gov.hmrc.currencyconversion.utils.MongoIdHelper.currentFileName
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
+import org.mongodb.scala.SingleObservableFuture
 
 import java.time.LocalDate
 import scala.concurrent.{ExecutionContext, Future}
@@ -93,7 +94,7 @@ class DefaultExchangeRateRepository @Inject() (mongoComponent: MongoComponent)(i
       }
 
   private def deleteOlderExchangeData() = {
-    val sixMonthOldDate = LocalDate.now.minusMonths(6.toInt)
+    val sixMonthOldDate = LocalDate.now.minusMonths(6)
     val oldFileName     = currentFileName(sixMonthOldDate)
 
     collection.findOneAndDelete(equal("_id", oldFileName)).toFutureOption() map {

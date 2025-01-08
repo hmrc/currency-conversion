@@ -24,9 +24,10 @@ import play.api.http.Status.{OK, SERVICE_UNAVAILABLE}
 import play.api.http.{ContentTypes, HeaderNames}
 import play.api.libs.json.Json
 import uk.gov.hmrc.currencyconversion.models.Service
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
+import play.api.libs.ws.writeableOf_JsValue
 
 import java.util.UUID
 import javax.inject.Singleton
@@ -53,7 +54,7 @@ class HODConnector @Inject() (
 
   def submit(): Future[HttpResponse] = {
 
-    implicit val hc: HeaderCarrier =
+    given hc: HeaderCarrier =
       HeaderCarrier()
         .withExtraHeaders(
           HeaderNames.ACCEPT        -> ContentTypes.JSON,
@@ -64,7 +65,7 @@ class HODConnector @Inject() (
           ENVIRONMENT               -> environment
         )
 
-    def call(implicit hc: HeaderCarrier): Future[HttpResponse] =
+    def call(using hc: HeaderCarrier): Future[HttpResponse] =
       http
         .post(url"$xrsFullUrl")
         .withBody(emptyJsonBody)

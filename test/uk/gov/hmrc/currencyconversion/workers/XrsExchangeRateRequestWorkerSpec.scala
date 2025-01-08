@@ -16,15 +16,15 @@
 
 package uk.gov.hmrc.currencyconversion.workers
 
-import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.client.WireMock.*
 import org.mockito.Mockito
-import org.mockito.Mockito.doReturn
+import org.mockito.Mockito.{mock, when}
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.currencyconversion.models.{ExchangeRate, ExchangeRateData}
 import uk.gov.hmrc.currencyconversion.repositories.ExchangeRateRepository
 import uk.gov.hmrc.currencyconversion.utils.WireMockHelper
@@ -227,8 +227,9 @@ class XrsExchangeRateRequestWorkerSpec
     val rateRequest                = new XrsExchangeRateRequest {
       override private[workers] def now = LocalDate.of(year, month, dayOfMonth)
     }
-    val mockExchangeRateRepository = Mockito.mock(classOf[ExchangeRateRepository])
-    doReturn(Future.successful(false)) when mockExchangeRateRepository isDataPresent "exrates-monthly-0722"
+    val mockExchangeRateRepository = mock(classOf[ExchangeRateRepository])
+    when(mockExchangeRateRepository.isDataPresent("exrates-monthly-0722"))
+      .thenReturn(Future.successful(false))
     false shouldBe await(rateRequest.isNextMonthsFileIsReceived(mockExchangeRateRepository))
   }
 
@@ -236,8 +237,9 @@ class XrsExchangeRateRequestWorkerSpec
     val rateRequest                = new XrsExchangeRateRequest {
       override private[workers] def now = LocalDate.of(year, month, dayOfMonth)
     }
-    val mockExchangeRateRepository = Mockito.mock(classOf[ExchangeRateRepository])
-    doReturn(Future.successful(true)) when mockExchangeRateRepository isDataPresent "exrates-monthly-0722"
+    val mockExchangeRateRepository = mock(classOf[ExchangeRateRepository])
+    when(mockExchangeRateRepository.isDataPresent("exrates-monthly-0722"))
+      .thenReturn(Future.successful(true))
     true shouldBe await(rateRequest.isNextMonthsFileIsReceived(mockExchangeRateRepository))
   }
 

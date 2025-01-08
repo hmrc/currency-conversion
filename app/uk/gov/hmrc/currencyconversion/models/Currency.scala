@@ -23,11 +23,11 @@ import play.api.libs.json.{Json, OFormat}
 case class Currency(countryName: String, currencyName: String, currencyCode: String)
 
 object Currency {
-  implicit val format: OFormat[Currency] = Json.format[Currency]
+  given format: OFormat[Currency] = Json.format[Currency]
 }
 
 case class CurrencyPeriod(start: LocalDate, end: LocalDate, currencies: Seq[Currency])
 
 object CurrencyPeriod {
-  implicit val format: OFormat[CurrencyPeriod] = Json.format[CurrencyPeriod]
+  given format: OFormat[CurrencyPeriod] = Json.format[CurrencyPeriod]
 }
