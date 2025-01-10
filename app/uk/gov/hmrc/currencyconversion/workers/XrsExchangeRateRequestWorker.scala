@@ -31,10 +31,10 @@ import uk.gov.hmrc.http.HttpErrorFunctions.is2xx
 import uk.gov.hmrc.http.HttpResponse
 
 import java.time.LocalDate
-import java.time.temporal.TemporalAdjusters._
-import scala.concurrent.duration._
+import java.time.temporal.TemporalAdjusters.*
+import scala.concurrent.duration.*
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.control.Exception._
+import scala.util.control.Exception.*
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
@@ -44,7 +44,7 @@ class XrsExchangeRateRequestWorker @Inject() (
   hodConnector: HODConnector,
   writeExchangeRateRepository: ExchangeRateRepository,
   xrsDelayHelper: XrsDelayHelper
-)(implicit mat: Materializer, ec: ExecutionContext)
+)(using mat: Materializer, ec: ExecutionContext)
     extends XrsExchangeRateRequest {
 
   private val initialDelayFromConfig               = config.get[String]("workers.xrs-exchange-rate.initial-delay").replace('.', ' ')
@@ -64,7 +64,7 @@ class XrsExchangeRateRequestWorker @Inject() (
   private val interval                                                    =
     Some(finiteInterval).collect { case d: FiniteDuration => d }.getOrElse(intervalFromConfigFiniteDuration)
 
-  private val supervisionStrategy: Supervision.Decider                    = {
+  private val supervisionStrategy: Supervision.Decider = {
     case NonFatal(_) => Supervision.resume
     case _           => Supervision.stop
   }

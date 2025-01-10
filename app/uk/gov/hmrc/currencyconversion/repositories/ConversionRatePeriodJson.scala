@@ -83,7 +83,7 @@ class ConversionRatePeriodJson @Inject() (writeExchangeRateRepository: ExchangeR
           }
       }
 
-  def getExchangeRates(filePath: String): Future[Map[String, Option[BigDecimal]]] = {
+  private def getExchangeRates(filePath: String): Future[Map[String, Option[BigDecimal]]] = {
 
     def getMinimumDecimalScale(rate: BigDecimal): BigDecimal =
       if (rate.scale < 2) rate.setScale(2) else rate

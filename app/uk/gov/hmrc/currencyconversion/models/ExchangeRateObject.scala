@@ -15,6 +15,7 @@
  */
 
 package uk.gov.hmrc.currencyconversion.models
+
 import play.api.libs.json.{Format, JsObject, OFormat, OWrites, Reads, __}
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
@@ -23,29 +24,29 @@ import java.time.Instant
 final case class ExchangeRateObject(fileName: String, exchangeRateData: JsObject)
 
 object ExchangeRateObject {
-  implicit val formatInstant: Format[Instant] = MongoJavatimeFormats.instantFormat
+  given formatInstant: Format[Instant] = MongoJavatimeFormats.instantFormat
 
-  implicit lazy val reads: Reads[ExchangeRateObject] = {
+  given reads: Reads[ExchangeRateObject] = {
 
-    import play.api.libs.functional.syntax._
+    import play.api.libs.functional.syntax.*
 
     (
       (__ \ "_id").read[String] and
         (__ \ "exchangeRateData").read[JsObject]
-    )(ExchangeRateObject.apply _)
+    )(ExchangeRateObject.apply)
   }
 
-  implicit lazy val writes: OWrites[ExchangeRateObject] = {
+  given writes: OWrites[ExchangeRateObject] = {
 
-    import play.api.libs.functional.syntax._
+    import play.api.libs.functional.syntax.*
 
     (
       (__ \ "_id").write[String] and
         (__ \ "exchangeRateData").write[JsObject]
-    )(unlift(ExchangeRateObject.unapply))
+    )(o => Tuple.fromProductTyped(o))
   }
 
-  implicit val format: OFormat[ExchangeRateObject] = OFormat(
+  given format: OFormat[ExchangeRateObject] = OFormat(
     reads,
     writes
   )

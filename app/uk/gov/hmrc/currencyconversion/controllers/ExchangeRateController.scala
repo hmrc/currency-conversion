@@ -17,7 +17,7 @@
 package uk.gov.hmrc.currencyconversion.controllers
 
 import play.api.libs.json.Json
-import play.api.mvc._
+import play.api.mvc.*
 import uk.gov.hmrc.currencyconversion.services.ExchangeRateService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 

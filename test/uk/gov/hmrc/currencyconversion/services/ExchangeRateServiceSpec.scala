@@ -22,8 +22,8 @@ import org.mockito.Mockito
 import org.mockito.Mockito.when
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import play.api.test.Helpers._
-import uk.gov.hmrc.currencyconversion.models._
+import play.api.test.Helpers.*
+import uk.gov.hmrc.currencyconversion.models.*
 import uk.gov.hmrc.currencyconversion.repositories.ConversionRatePeriodRepository
 
 import scala.concurrent.ExecutionContext.Implicits.global

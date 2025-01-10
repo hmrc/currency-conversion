@@ -20,8 +20,8 @@ import java.time.LocalDate
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.libs.json.{JsObject, Json}
-import play.api.test.Helpers._
-import uk.gov.hmrc.currencyconversion.models._
+import play.api.test.Helpers.*
+import uk.gov.hmrc.currencyconversion.models.*
 import uk.gov.hmrc.currencyconversion.utils.MongoIdHelper.currentFileName
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
