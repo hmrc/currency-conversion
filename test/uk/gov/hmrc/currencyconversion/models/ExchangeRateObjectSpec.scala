@@ -28,7 +28,7 @@ class ExchangeRateObjectSpec extends AnyWordSpec with Matchers {
         fileName = "file123",
         exchangeRateData = Json.obj("key1" -> "value1", "key2" -> "value2")
       )
-      val expectedJson = Json.parse("""{
+      val expectedJson       = Json.parse("""{
                                       | "_id": "file123",
                                       | "exchangeRateData": {
                                       |   "key1": "value1",
@@ -40,7 +40,7 @@ class ExchangeRateObjectSpec extends AnyWordSpec with Matchers {
     }
 
     "deserialize from JSON" in {
-      val json = Json.parse("""{
+      val json                       = Json.parse("""{
                               | "_id": "file123",
                               | "exchangeRateData": {
                               |   "key1": "value1",
@@ -75,7 +75,7 @@ class ExchangeRateObjectSpec extends AnyWordSpec with Matchers {
     }
 
     "handle empty exchangeRateData during deserialization" in {
-      val json = Json.parse("""{
+      val json                       = Json.parse("""{
                               | "_id": "file123",
                               | "exchangeRateData": {}
                               |}""".stripMargin)

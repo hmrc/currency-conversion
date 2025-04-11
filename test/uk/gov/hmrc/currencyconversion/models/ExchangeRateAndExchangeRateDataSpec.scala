@@ -44,7 +44,7 @@ class ExchangeRateAndExchangeRateDataSpec extends AnyWordSpec with Matchers {
     }
 
     "deserialize from JSON" in {
-      val json = Json.parse("""{
+      val json                 = Json.parse("""{
                               | "validFrom": "2023-01-01",
                               | "validTo": "2023-12-31",
                               | "currencyCode": "GBP",
@@ -75,14 +75,14 @@ class ExchangeRateAndExchangeRateDataSpec extends AnyWordSpec with Matchers {
 
   "ExchangeRateData" should {
     "serialize to JSON" in {
-      val exchangeRate1 = ExchangeRate(
+      val exchangeRate1    = ExchangeRate(
         validFrom = LocalDate.of(2023, 1, 1),
         validTo = LocalDate.of(2023, 12, 31),
         currencyCode = "GBP",
         exchangeRate = BigDecimal(1.2345),
         currencyName = "Pound Sterling"
       )
-      val exchangeRate2 = ExchangeRate(
+      val exchangeRate2    = ExchangeRate(
         validFrom = LocalDate.of(2023, 6, 1),
         validTo = LocalDate.of(2023, 12, 31),
         currencyCode = "USD",
@@ -94,7 +94,7 @@ class ExchangeRateAndExchangeRateDataSpec extends AnyWordSpec with Matchers {
         correlationId = "abc-123",
         exchangeData = Seq(exchangeRate1, exchangeRate2)
       )
-      val expectedJson = Json.parse("""{
+      val expectedJson     = Json.parse("""{
                                       | "timestamp": "2023-01-01T12:34:56Z",
                                       | "correlationId": "abc-123",
                                       | "exchangeData": [
@@ -107,7 +107,7 @@ class ExchangeRateAndExchangeRateDataSpec extends AnyWordSpec with Matchers {
     }
 
     "deserialize from JSON" in {
-      val json = Json.parse("""{
+      val json                     = Json.parse("""{
                               | "timestamp": "2023-01-01T12:34:56Z",
                               | "correlationid": "abc-123",
                               | "exchangeRates": [
@@ -115,14 +115,14 @@ class ExchangeRateAndExchangeRateDataSpec extends AnyWordSpec with Matchers {
                               |   {"validFrom": "2023-06-01", "validTo": "2023-12-31", "currencyCode": "USD", "exchangeRate": 1.5678, "currencyName": "US Dollar"}
                               | ]
                               |}""".stripMargin)
-      val exchangeRate1 = ExchangeRate(
+      val exchangeRate1            = ExchangeRate(
         validFrom = LocalDate.of(2023, 1, 1),
         validTo = LocalDate.of(2023, 12, 31),
         currencyCode = "GBP",
         exchangeRate = BigDecimal(1.2345),
         currencyName = "Pound Sterling"
       )
-      val exchangeRate2 = ExchangeRate(
+      val exchangeRate2            = ExchangeRate(
         validFrom = LocalDate.of(2023, 6, 1),
         validTo = LocalDate.of(2023, 12, 31),
         currencyCode = "USD",
@@ -139,7 +139,7 @@ class ExchangeRateAndExchangeRateDataSpec extends AnyWordSpec with Matchers {
     }
 
     "handle default empty exchange rates during deserialization" in {
-      val json = Json.parse("""{
+      val json                     = Json.parse("""{
                               | "timestamp": "2023-01-01T12:34:56Z",
                               | "correlationid": "abc-123"
                               |}""".stripMargin)
