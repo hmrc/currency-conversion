@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 HM Revenue & Customs
+ * Copyright 2024 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,29 +18,22 @@ package uk.gov.hmrc.currencyconversion.connectors
 
 import com.github.tomakehurst.wiremock.client.MappingBuilder
 import com.github.tomakehurst.wiremock.client.WireMock.*
-import org.apache.pekko.pattern.CircuitBreaker
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.time.{Millis, Seconds, Span}
-import org.scalatestplus.play.guice.GuiceOneServerPerTest
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
-import play.api.http.{ContentTypes, HeaderNames, Status}
-import play.api.inject.bind
+import play.api.http.{ContentTypes, HeaderNames}
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.*
 import uk.gov.hmrc.currencyconversion.utils.WireMockHelper
-import org.apache.pekko.actor.ActorSystem
-
-import java.util.concurrent.TimeUnit
-import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.ExecutionContext
 
 class HODConnectorSpec
-    extends AnyFreeSpec
+    extends AnyWordSpec
     with Matchers
-    with GuiceOneServerPerTest
+    with GuiceOneAppPerSuite
     with WireMockHelper
     with ScalaFutures
     with IntegrationPatience
@@ -49,42 +42,29 @@ class HODConnectorSpec
   implicit override val patienceConfig: PatienceConfig =
     PatienceConfig(timeout = Span(30, Seconds), interval = Span(100, Millis))
 
-  override def beforeEach(): Unit = {
-    super.beforeEach()
-    server.resetAll()
-  }
-
-  private def healthyCircuitBreaker(system: ActorSystem): CircuitBreaker = {
-    implicit val ec: ExecutionContext = system.dispatcher
-
-    new CircuitBreaker(
-      system.scheduler,
-      maxFailures = 2,
-      callTimeout = FiniteDuration(2, TimeUnit.SECONDS),
-      resetTimeout = FiniteDuration(1, TimeUnit.SECONDS)
-    )
-  }
+  private lazy val connector: HODConnector = app.injector.instanceOf[HODConnector]
+  val expectedBearerToken                  = "test-bearer-token"
+  val expectedEnvironment                  = "test-environment"
+  val datePattern                          = "[A-Za-z]{3}, \\d{2} [A-Za-z]{3} \\d{4} \\d{2}:\\d{2}:\\d{2} GMT"
+  val uuidPattern                          = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
 
   override def fakeApplication(): Application =
     new GuiceApplicationBuilder()
-      .overrides
-      // Create a test ActorSystem and pass it to the circuit breaker
-      {
-        val system = ActorSystem("test-system")
-        bind[CircuitBreaker].qualifiedWith("des").toInstance(healthyCircuitBreaker(system))
-      }
       .configure(
-        "microservice.services.des.port"         -> server.port(),
-        "microservice.services.des.bearer-token" -> "test-bearer-token",
-        "microservice.services.des.environment"  -> "test-environment",
-        "microservice.services.des.endpoint"     -> "/passengers/exchangerequest/xrs/getexchangerate/v1"
+        "microservice.services.des.port"                          -> server.port(),
+        "microservice.services.des.circuit-breaker.max-failures"  -> 1,
+        "microservice.services.des.circuit-breaker.reset-timeout" -> "1 second",
+        "microservice.services.des.circuit-breaker.call-timeout"  -> "1 second",
+        "microservice.services.des.bearer-token"                  -> expectedBearerToken,
+        "microservice.services.des.environment"                   -> "test-environment",
+        "microservice.services.des.endpoint"                      -> "/passengers/exchangerequest/xrs/getexchangerate/v1"
       )
       .build()
 
   private def stubCall: MappingBuilder =
     post(urlEqualTo("/passengers/exchangerequest/xrs/getexchangerate/v1"))
 
-  private def stubWithDelay(status: Int, delayMs: Int = 3000): Unit =
+  private def stubWithDelay(status: Int, delayMs: Int = 2000): Unit =
     server.stubFor(
       stubCall
         .willReturn(
@@ -94,78 +74,110 @@ class HODConnectorSpec
         )
     )
 
-  "HODConnector" - {
+  "HODConnector" when {
 
-    "Header Verification" - {
-      "must send the correct headers to the HOD" in {
-        val connector           = app.injector.instanceOf[HODConnector]
-        val expectedBearerToken = "test-bearer-token"
-        val expectedEnvironment = "test-environment"
-        val datePattern         = "[A-Za-z]{3}, \\d{2} [A-Za-z]{3} \\d{4} \\d{2}:\\d{2}:\\d{2} GMT"
-        val uuidPattern         = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+    "must send the correct headers to the HOD" in {
+      server.stubFor(
+        stubCall
+          .withHeader(HeaderNames.ACCEPT, equalTo(ContentTypes.JSON))
+          .withHeader(HeaderNames.CONTENT_TYPE, equalTo(ContentTypes.JSON))
+          .withHeader(HeaderNames.AUTHORIZATION, equalTo(s"Bearer $expectedBearerToken"))
+          .withHeader("Environment", equalTo(expectedEnvironment))
+          .withHeader(HeaderNames.DATE, matching(datePattern))
+          .withHeader("X-Correlation-ID", matching(uuidPattern))
+          .willReturn(aResponse().withStatus(OK))
+      )
 
-        server.stubFor(
-          stubCall
-            .withHeader(HeaderNames.ACCEPT, equalTo(ContentTypes.JSON))
-            .withHeader(HeaderNames.CONTENT_TYPE, equalTo(ContentTypes.JSON))
-            .withHeader(HeaderNames.AUTHORIZATION, equalTo(s"Bearer $expectedBearerToken"))
-            .withHeader("Environment", equalTo(expectedEnvironment))
-            .withHeader(HeaderNames.DATE, matching(datePattern))
-            .withHeader("X-Correlation-ID", matching(uuidPattern))
-            .willReturn(aResponse().withStatus(OK))
-        )
+      val result = connector.submit().futureValue
 
-        val result = connector.submit().futureValue
+      result.status mustBe OK
 
-        result.status mustBe OK
-
-        server.verify(
-          postRequestedFor(urlEqualTo("/passengers/exchangerequest/xrs/getexchangerate/v1"))
-            .withHeader(HeaderNames.ACCEPT, equalTo(ContentTypes.JSON))
-            .withHeader(HeaderNames.CONTENT_TYPE, equalTo(ContentTypes.JSON))
-            .withHeader(HeaderNames.AUTHORIZATION, equalTo(s"Bearer $expectedBearerToken"))
-            .withHeader("Environment", equalTo(expectedEnvironment))
-            .withHeader(HeaderNames.DATE, matching(datePattern))
-            .withHeader("X-Correlation-ID", matching(uuidPattern))
-        )
-      }
-
-      "must return SERVICE_UNAVAILABLE (503) when the downstream service rejects the authorization token (returns 401)" in {
-        val connector           = app.injector.instanceOf[HODConnector]
-        val expectedBearerToken = "test-bearer-token"
-
-        server.stubFor(
-          stubCall
-            .withHeader(HeaderNames.AUTHORIZATION, equalTo(s"Bearer $expectedBearerToken"))
-            .willReturn(
-              aResponse()
-                .withStatus(UNAUTHORIZED)
-                .withBody("Invalid authentication credentials")
-            )
-        )
-
-        val result = connector.submit().futureValue
-        result.status mustBe SERVICE_UNAVAILABLE
-        result.body must include(s"Fall back response from")
-        server.verify(
-          postRequestedFor(urlEqualTo("/passengers/exchangerequest/xrs/getexchangerate/v1"))
-            .withHeader(HeaderNames.AUTHORIZATION, equalTo(s"Bearer $expectedBearerToken"))
-        )
-      }
+      server.verify(
+        postRequestedFor(urlEqualTo("/passengers/exchangerequest/xrs/getexchangerate/v1"))
+          .withHeader(HeaderNames.ACCEPT, equalTo(ContentTypes.JSON))
+          .withHeader(HeaderNames.CONTENT_TYPE, equalTo(ContentTypes.JSON))
+          .withHeader(HeaderNames.AUTHORIZATION, equalTo(s"Bearer $expectedBearerToken"))
+          .withHeader("Environment", equalTo(expectedEnvironment))
+          .withHeader(HeaderNames.DATE, matching(datePattern))
+          .withHeader("X-Correlation-ID", matching(uuidPattern))
+      )
     }
 
     "must call the HOD when xrs worker thread is started" in {
-      val connector = app.injector.instanceOf[HODConnector]
       server.stubFor(
         stubCall
           .willReturn(aResponse().withStatus(OK))
       )
+
       connector.submit().futureValue.status mustBe OK
     }
 
-    "must fall back to a 503 (SERVICE_UNAVAILABLE) when the circuit breaker handles" - {
-      "non-OK responses" in {
-        val connector = app.injector.instanceOf[HODConnector]
+    "must return SERVICE_UNAVAILABLE (503) when the downstream service rejects the authorization token (returns 401)" in {
+      server.stubFor(
+        stubCall
+//          .withHeader(HeaderNames.AUTHORIZATION, equalTo(s"Bearer $expectedBearerToken"))
+          .willReturn(
+            aResponse()
+              .withStatus(UNAUTHORIZED)
+              .withBody("Invalid authentication credentials")
+          )
+      )
+
+      val result = connector.submit().futureValue
+
+      result.status mustBe SERVICE_UNAVAILABLE
+
+      result.body must include(s"Fall back response from")
+
+      println(s"Server port: ${server.port()}")
+
+      server.verify(
+        postRequestedFor(urlEqualTo("/passengers/exchangerequest/xrs/getexchangerate/v1"))
+          .withHeader(HeaderNames.AUTHORIZATION, equalTo(s"Bearer $expectedBearerToken"))
+      )
+    }
+
+    "must fall back to a 503 (SERVICE_UNAVAILABLE) when the circuit breaker handles" should {
+      def test(status: Int): Unit =
+        s"2xx statuses and above with an invalid status $status" in {
+          server.stubFor(
+            stubCall
+              .willReturn(aResponse().withStatus(status))
+          )
+
+          connector.submit().futureValue.status mustBe SERVICE_UNAVAILABLE
+        }
+
+      val invalidStatusResponses: Seq[Int] = Seq(
+        CREATED,
+        ACCEPTED,
+        NO_CONTENT,
+        MOVED_PERMANENTLY,
+        FOUND,
+        SEE_OTHER,
+        BAD_REQUEST,
+        UNAUTHORIZED,
+        FORBIDDEN,
+        NOT_FOUND,
+        INTERNAL_SERVER_ERROR,
+        BAD_GATEWAY,
+        SERVICE_UNAVAILABLE
+      )
+
+      invalidStatusResponses.foreach(status => test(status))
+
+      Seq(CONTINUE, SWITCHING_PROTOCOLS).foreach { status =>
+        s"1xx statuses with an invalid status $status" in {
+          server.stubFor(
+            stubCall
+              .willReturn(aResponse().withStatus(status))
+          )
+
+          connector.submit().futureValue.status mustBe SERVICE_UNAVAILABLE
+        }
+      }
+
+      "non-OK responses triggering circuit breaker" in {
         stubWithDelay(INTERNAL_SERVER_ERROR)
 
         val result1 = connector.submit().futureValue
@@ -175,9 +187,7 @@ class HODConnectorSpec
         result2.status mustBe SERVICE_UNAVAILABLE
       }
 
-      "slow responses" in {
-        val connector = app.injector.instanceOf[HODConnector]
-
+      "slow responses triggering circuit breaker timeout" in {
         stubWithDelay(OK, 5000)
 
         val result = connector.submit().futureValue
