@@ -25,7 +25,7 @@ import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
-import play.api.http.{ContentTypes, HeaderNames}
+import play.api.http.{ContentTypes, HeaderNames, Status}
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.*
 import uk.gov.hmrc.currencyconversion.utils.WireMockHelper
@@ -115,7 +115,6 @@ class HODConnectorSpec
     "must return SERVICE_UNAVAILABLE (503) when the downstream service rejects the authorization token (returns 401)" in {
       server.stubFor(
         stubCall
-//          .withHeader(HeaderNames.AUTHORIZATION, equalTo(s"Bearer $expectedBearerToken"))
           .willReturn(
             aResponse()
               .withStatus(UNAUTHORIZED)
@@ -128,8 +127,6 @@ class HODConnectorSpec
       result.status mustBe SERVICE_UNAVAILABLE
 
       result.body must include(s"Fall back response from")
-
-      println(s"Server port: ${server.port()}")
 
       server.verify(
         postRequestedFor(urlEqualTo("/passengers/exchangerequest/xrs/getexchangerate/v1"))
@@ -148,21 +145,17 @@ class HODConnectorSpec
           connector.submit().futureValue.status mustBe SERVICE_UNAVAILABLE
         }
 
-      val invalidStatusResponses: Seq[Int] = Seq(
-        CREATED,
-        ACCEPTED,
-        NO_CONTENT,
-        MOVED_PERMANENTLY,
-        FOUND,
-        SEE_OTHER,
-        BAD_REQUEST,
-        UNAUTHORIZED,
-        FORBIDDEN,
-        NOT_FOUND,
-        INTERNAL_SERVER_ERROR,
-        BAD_GATEWAY,
-        SERVICE_UNAVAILABLE
-      )
+      val invalidStatusResponses: Seq[Int] = Status.getClass.getDeclaredFields.toSeq
+        .map { field =>
+          field.setAccessible(true)
+          field.get(field.getName)
+        }
+        .flatMap {
+          case fieldValue: java.lang.Integer
+              if fieldValue != CONTINUE && fieldValue != SWITCHING_PROTOCOLS && fieldValue != OK =>
+            Some(fieldValue.toInt)
+          case _ => None
+        }
 
       invalidStatusResponses.foreach(status => test(status))
 
