@@ -26,7 +26,7 @@ class CurrencyAndCurrencyPeriodSpec extends AnyWordSpec with Matchers {
 
   "Currency" should {
     "serialize to JSON" in {
-      val currency = Currency("United Kingdom", "Pound Sterling", "GBP")
+      val currency     = Currency("United Kingdom", "Pound Sterling", "GBP")
       val expectedJson = Json.parse("""{
                                       | "countryName": "United Kingdom",
                                       | "currencyName": "Pound Sterling",
@@ -37,7 +37,7 @@ class CurrencyAndCurrencyPeriodSpec extends AnyWordSpec with Matchers {
     }
 
     "deserialize from JSON" in {
-      val json = Json.parse("""{
+      val json             = Json.parse("""{
                               | "countryName": "United Kingdom",
                               | "currencyName": "Pound Sterling",
                               | "currencyCode": "GBP"
@@ -59,9 +59,9 @@ class CurrencyAndCurrencyPeriodSpec extends AnyWordSpec with Matchers {
 
   "CurrencyPeriod" should {
     "serialize to JSON" in {
-      val currency1 = Currency("United Kingdom", "Pound Sterling", "GBP")
-      val currency2 = Currency("United States", "US Dollar", "USD")
-      val period = CurrencyPeriod(
+      val currency1    = Currency("United Kingdom", "Pound Sterling", "GBP")
+      val currency2    = Currency("United States", "US Dollar", "USD")
+      val period       = CurrencyPeriod(
         start = LocalDate.of(2023, 1, 1),
         end = LocalDate.of(2023, 12, 31),
         currencies = Seq(currency1, currency2)
@@ -79,7 +79,7 @@ class CurrencyAndCurrencyPeriodSpec extends AnyWordSpec with Matchers {
     }
 
     "deserialize from JSON" in {
-      val json = Json.parse("""{
+      val json           = Json.parse("""{
                               | "start": "2023-01-01",
                               | "end": "2023-12-31",
                               | "currencies": [
@@ -87,8 +87,8 @@ class CurrencyAndCurrencyPeriodSpec extends AnyWordSpec with Matchers {
                               |   {"countryName": "United States", "currencyName": "US Dollar", "currencyCode": "USD"}
                               | ]
                               |}""".stripMargin)
-      val currency1 = Currency("United Kingdom", "Pound Sterling", "GBP")
-      val currency2 = Currency("United States", "US Dollar", "USD")
+      val currency1      = Currency("United Kingdom", "Pound Sterling", "GBP")
+      val currency2      = Currency("United States", "US Dollar", "USD")
       val expectedPeriod = CurrencyPeriod(
         start = LocalDate.of(2023, 1, 1),
         end = LocalDate.of(2023, 12, 31),
@@ -108,7 +108,7 @@ class CurrencyAndCurrencyPeriodSpec extends AnyWordSpec with Matchers {
     }
 
     "handle an empty currencies list" in {
-      val period = CurrencyPeriod(
+      val period       = CurrencyPeriod(
         start = LocalDate.of(2023, 1, 1),
         end = LocalDate.of(2023, 12, 31),
         currencies = Seq.empty
