@@ -1,5 +1,10 @@
-digital-service: BC-PASSENGERS
+digital-service: OSP / Online Service for Passengers
+description: This service is used to retrieve one or more exchange rates for countries from the approved HMRC monthly exchange rates.
 repoVisibility: public_0C3F0CE3E6E6448FAD341E7BFA50FCD333E06A20CFF05FCACE61154DDBBADF71
+type: Service
+service-type: Backend
 test-repositories:
   - bc-passengers-acceptance-tests
   - bc-passengers-performance-tests
+  - bc-passengers-stride-acceptance-tests
+  - bc-passengers-declarations-performance-tests
