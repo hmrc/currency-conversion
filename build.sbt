@@ -18,7 +18,7 @@ lazy val microservice = Project(appName, file("."))
     )
   )
   .settings(
-    routesImport ++= Seq("uk.gov.hmrc.currencyconversion.binders.DateBinder._", "java.time._")
+    routesImport ++= Seq("uk.gov.hmrc.currencyconversion.binders.DateBinder.*", "java.time.*")
   )
   .settings(PlayKeys.playDefaultPort := 9016)
 
